@@ -13,7 +13,7 @@ namespace McpUnity.Resources
     /// </summary>
     public class GetMenuItemsResource : McpResourceBase
     {
-        private string _description;
+        private JArray _cachedMenuItems;
 
         public GetMenuItemsResource()
         {
@@ -29,15 +29,18 @@ namespace McpUnity.Resources
         /// <returns>A JObject containing the list of menu items</returns>
         public override JObject Fetch(JObject parameters)
         {
-            // Get all menu items
-            JArray menuItems = GetAllMenuItems();
-                
+            // Cache menu items on first fetch
+            if (_cachedMenuItems == null)
+            {
+                _cachedMenuItems = GetAllMenuItems();
+            }
+
             // Create the response
             return new JObject
             {
                 ["success"] = true,
-                ["message"] = $"Retrieved {menuItems.Count} menu items",
-                ["menuItems"] = menuItems
+                ["message"] = $"Retrieved {_cachedMenuItems.Count} menu items",
+                ["menuItems"] = _cachedMenuItems
             };
         }
         

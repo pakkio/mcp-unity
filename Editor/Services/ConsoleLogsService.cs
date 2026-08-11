@@ -31,10 +31,12 @@ namespace McpUnity.Services
         
         // Constants for log management
         private const int MaxLogEntries = 1000;
-        private const int CleanupThreshold = 200; // Remove oldest entries when exceeding max
         
-        // Collection to store all log messages
-        private readonly List<LogEntry> _logEntries = new List<LogEntry>();
+        // Ring buffer to store all log messages without array allocations
+        private readonly LogEntry[] _logBuffer = new LogEntry[MaxLogEntries];
+        private int _head = 0;
+        private int _count = 0;
+        private readonly object _lockObj = new object();
         
         /// <summary>
         /// Constructor
@@ -109,14 +111,16 @@ namespace McpUnity.Services
                 }
             }
             
-            lock (_logEntries)
+            lock (_lockObj)
             {
-                totalCount = _logEntries.Count;
+                totalCount = _count;
                 
                 // Single pass: count filtered entries and collect the requested page (newest first)
-                for (int i = _logEntries.Count - 1; i >= 0; i--)
+                for (int i = 0; i < _count; i++)
                 {
-                    var entry = _logEntries[i];
+                    int index = (_head - 1 - i + MaxLogEntries) % MaxLogEntries;
+                    var entry = _logBuffer[index];
+                    if (entry == null) continue;
                     
                     // Skip if filtering and entry doesn't match the filter
                     if (filter && !unityLogTypes.Contains(entry.Type.ToString()))
@@ -165,9 +169,11 @@ namespace McpUnity.Services
         /// </summary>
         private void ClearLogs()
         {
-            lock (_logEntries)
+            lock (_lockObj)
             {
-                _logEntries.Clear();
+                _head = 0;
+                _count = 0;
+                Array.Clear(_logBuffer, 0, MaxLogEntries);
             }
         }
         
@@ -177,12 +183,11 @@ namespace McpUnity.Services
         /// <param name="keepCount">Number of recent entries to keep (default: 500)</param>
         public void CleanupOldLogs(int keepCount = 500)
         {
-            lock (_logEntries)
+            lock (_lockObj)
             {
-                if (_logEntries.Count > keepCount)
+                if (_count > keepCount)
                 {
-                    int removeCount = _logEntries.Count - keepCount;
-                    _logEntries.RemoveRange(0, removeCount);
+                    _count = keepCount;
                 }
             }
         }
@@ -193,9 +198,9 @@ namespace McpUnity.Services
         /// <returns>Number of stored log entries</returns>
         public int GetLogCount()
         {
-            lock (_logEntries)
+            lock (_lockObj)
             {
-                return _logEntries.Count;
+                return _count;
             }
         }
         
@@ -225,7 +230,7 @@ namespace McpUnity.Services
                 int currentTotalCount = (int)s_getCountMethod.Invoke(null, null);
 
                 // If we had logs before, but now we don't, console was likely cleared
-                if (currentTotalCount == 0 && _logEntries.Count > 0)
+                if (currentTotalCount == 0 && _count > 0)
                 {
                     ClearLogs();
                 }
@@ -245,21 +250,20 @@ namespace McpUnity.Services
         /// <param name="type">The log type</param>
         private void OnLogMessageReceived(string logString, string stackTrace, LogType type)
         {
-            // Add the log entry to our collection
-            lock (_logEntries)
+            // Add the log entry to our ring buffer
+            lock (_lockObj)
             {
-                _logEntries.Add(new LogEntry
+                _logBuffer[_head] = new LogEntry
                 {
                     Message = logString,
                     StackTrace = stackTrace,
                     Type = type,
                     Timestamp = DateTime.Now
-                });
-                
-                // Clean up old entries if we exceed the maximum
-                if (_logEntries.Count > MaxLogEntries)
+                };
+                _head = (_head + 1) % MaxLogEntries;
+                if (_count < MaxLogEntries)
                 {
-                    _logEntries.RemoveRange(0, CleanupThreshold);
+                    _count++;
                 }
             }
         }
@@ -271,7 +275,7 @@ namespace McpUnity.Services
         private void OnConsoleCountChanged()
         {
             ConsoleWindowUtility.GetConsoleLogCounts(out int error, out int warning, out int log);
-            if (error == 0 && warning == 0 && log == 0 && _logEntries.Count > 0)
+            if (error == 0 && warning == 0 && log == 0 && _count > 0)
             {
                 ClearLogs();
             }

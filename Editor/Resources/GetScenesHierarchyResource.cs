@@ -24,12 +24,16 @@ public class GetScenesHierarchyResource : McpResourceBase
         /// <summary>
         /// Fetch all game objects in the Unity loaded scenes
         /// </summary>
-        /// <param name="parameters">Resource parameters as a JObject (not used)</param>
+        /// <param name="parameters">Resource parameters as a JObject (optional maxDepth, includeComponents, includeComponentProperties)</param>
         /// <returns>A JObject containing the hierarchy of game objects</returns>
         public override JObject Fetch(JObject parameters)
         {
+            int maxDepth = parameters?["maxDepth"]?.ToObject<int?>() ?? GetGameObjectResource.DefaultMaxChildDepth;
+            bool includeComponents = parameters?["includeComponents"]?.ToObject<bool?>() ?? false;
+            bool includeComponentProperties = parameters?["includeComponentProperties"]?.ToObject<bool?>() ?? false;
+
             // Get all game objects in the hierarchy
-            JArray hierarchyArray = GetSceneHierarchy();
+            JArray hierarchyArray = GetSceneHierarchy(maxDepth, includeComponents, includeComponentProperties);
                 
             // Create the response
             return new JObject
@@ -44,7 +48,7 @@ public class GetScenesHierarchyResource : McpResourceBase
         /// Get all game objects in the Unity loaded scenes
         /// </summary>
         /// <returns>A JArray containing the hierarchy of game objects</returns>
-        private JArray GetSceneHierarchy()
+        private JArray GetSceneHierarchy(int maxDepth, bool includeComponents, bool includeComponentProperties)
         {
             JArray rootObjectsArray = new JArray();
             
@@ -76,7 +80,12 @@ public class GetScenesHierarchyResource : McpResourceBase
                 foreach (GameObject rootObject in rootObjects)
                 {
                     // Add the root object and its children to the array
-                    rootObjectsInScene.Add(GetGameObjectResource.GameObjectToJObject(rootObject, false));
+                    rootObjectsInScene.Add(GetGameObjectResource.GameObjectToJObject(
+                        rootObject,
+                        false,
+                        maxDepth,
+                        includeComponents,
+                        includeComponentProperties));
                 }
                 
                 // Add the scene to the root objects array

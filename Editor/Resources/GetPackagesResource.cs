@@ -15,6 +15,7 @@ namespace McpUnity.Resources
     public class GetPackagesResource : McpResourceBase
     {
         private ListRequest _listRequest;
+        private JObject _cachedResult;
         
         public GetPackagesResource()
         {
@@ -30,6 +31,12 @@ namespace McpUnity.Resources
         /// <returns>JObject containing packages information</returns>
         public override JObject Fetch(JObject parameters)
         {
+            bool forceRefresh = parameters?["forceRefresh"]?.ToObject<bool>() ?? false;
+            if (_cachedResult != null && !forceRefresh)
+            {
+                return _cachedResult;
+            }
+
             // Get project packages (installed)
             var projectPackages = GetProjectPackages();
                 
@@ -37,13 +44,15 @@ namespace McpUnity.Resources
             var registryPackages = GetRegistryPackages();
                 
             // Return combined result
-            return new JObject
+            _cachedResult = new JObject
             {
                 ["success"] = true,
                 ["message"] = $"Retrieved {projectPackages.Count} project packages and {registryPackages.Count} registry packages",
                 ["projectPackages"] = projectPackages,
                 ["registryPackages"] = registryPackages
             };
+
+            return _cachedResult;
         }
         
         /// <summary>
