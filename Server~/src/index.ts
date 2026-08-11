@@ -22,6 +22,7 @@ import { registerGetPlayModeStatusTool } from './tools/getPlayModeStatusTool.js'
 import { registerSetPlayModeStatusTool } from './tools/setPlayModeStatusTool.js';
 import { registerUnloadSceneTool } from './tools/unloadSceneTool.js';
 import { registerRecompileScriptsTool } from './tools/recompileScriptsTool.js';
+import { registerExportPackageTool } from './tools/exportPackageTool.js';
 import { registerGetGameObjectTool } from './tools/getGameObjectTool.js';
 import { registerTransformTools } from './tools/transformTools.js';
 import { registerCreateMaterialTool, registerAssignMaterialTool, registerModifyMaterialTool, registerGetMaterialInfoTool } from './tools/materialTools.js';
@@ -86,6 +87,7 @@ registerShowUnityDashboardTool(server, toolLogger);
 registerGetScenesHierarchyTool(server, mcpUnity, toolLogger);
 registerUnloadSceneTool(server, mcpUnity, toolLogger);
 registerRecompileScriptsTool(server, mcpUnity, toolLogger);
+registerExportPackageTool(server, mcpUnity, toolLogger);
 registerGetGameObjectTool(server, mcpUnity, toolLogger);
 registerTransformTools(server, mcpUnity, toolLogger);
 registerDuplicateGameObjectTool(server, mcpUnity, toolLogger);

@@ -838,6 +838,10 @@ namespace McpUnity.Unity
             // Register RecompileScriptsTool
             RecompileScriptsTool recompileScriptsTool = new RecompileScriptsTool();
             _tools.Add(recompileScriptsTool.Name, recompileScriptsTool);
+
+            // Register ExportPackageTool
+            ExportPackageTool exportPackageTool = new ExportPackageTool();
+            _tools.Add(exportPackageTool.Name, exportPackageTool);
             
             // Register GetGameObjectTool
             GetGameObjectTool getGameObjectTool = new GetGameObjectTool();
