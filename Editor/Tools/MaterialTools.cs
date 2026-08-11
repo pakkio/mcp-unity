@@ -328,7 +328,6 @@ namespace McpUnity.Tools
             // Save the material as an asset
             AssetDatabase.CreateAsset(material, savePath);
             AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
 
             McpLogger.LogInfo($"[MCP Unity] Created material '{name}' with shader '{shaderName}' at '{savePath}'");
 
@@ -625,7 +624,6 @@ namespace McpUnity.Tools
             // Mark as dirty and save
             EditorUtility.SetDirty(material);
             AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
 
             McpLogger.LogInfo($"[MCP Unity] Modified material '{material.name}': {string.Join(", ", modifiedProperties)}");
 
