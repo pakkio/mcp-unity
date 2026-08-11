@@ -3,8 +3,8 @@
 [![](https://badge.mcpx.dev?status=on 'MCP Enabled')](https://modelcontextprotocol.io/introduction)
 [![](https://img.shields.io/badge/Unity-000000?style=flat&logo=unity&logoColor=white 'Unity')](https://unity.com/releases/editor/archive)
 [![](https://img.shields.io/badge/Node.js-339933?style=flat&logo=nodedotjs&logoColor=white 'Node.js')](https://nodejs.org/en/download/)
-[![](https://img.shields.io/github/stars/CoderGamester/mcp-unity 'Stars')](https://github.com/CoderGamester/mcp-unity/stargazers)
-[![](https://img.shields.io/github/last-commit/CoderGamester/mcp-unity 'Last Commit')](https://github.com/CoderGamester/mcp-unity/commits/main)
+[![](https://img.shields.io/github/stars/pakkio/mcp-unity 'Stars')](https://github.com/pakkio/mcp-unity/stargazers)
+[![](https://img.shields.io/github/last-commit/pakkio/mcp-unity 'Last Commit')](https://github.com/pakkio/mcp-unity/commits/main)
 [![](https://img.shields.io/badge/License-MIT-red.svg 'MIT License')](https://opensource.org/licenses/MIT)
 
 | [🇺🇸English](README.md) | [🇨🇳简体中文](README_zh-CN.md) | [🇯🇵日本語](README-ja.md) |
@@ -250,7 +250,7 @@ Installing this MCP Unity Server is a multi-step process:
 1. Open the Unity Package Manager (Window > Package Manager)
 2. Click the "+" button in the top-left corner
 3. Select "Add package from git URL..."
-4. Enter: `https://github.com/CoderGamester/mcp-unity.git`
+4. Enter: `https://github.com/pakkio/mcp-unity.git`
 5. Click "Add"
 
 ![package manager](https://github.com/user-attachments/assets/a72bfca4-ae52-48e7-a876-e99c701b0497)
@@ -719,7 +719,7 @@ npm run test:watch
 
 ## Support & Feedback
 
-If you have any questions or need support, please open an [issue](https://github.com/CoderGamester/mcp-unity/issues) on this repository or alternative you can reach out on:
+If you have any questions or need support, please open an [issue](https://github.com/pakkio/mcp-unity/issues) on this repository or alternative you can reach out on:
 - Linkedin: [![](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white 'LinkedIn')](https://www.linkedin.com/in/miguel-tomas/)
 - Discord: gamester7178
 - Email: game.gamester@gmail.com
