@@ -19,7 +19,7 @@ namespace McpUnity.Utils
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool KillTimer(IntPtr hWnd, UIntPtr uIDEvent);
 
-        private const uint TickIntervalMs = 100;
+        private const uint TickIntervalMs = 25;
 
         // Rooted for the complete native timer lifetime so the callback cannot be collected.
         private static readonly TimerProc Callback = OnTimer;

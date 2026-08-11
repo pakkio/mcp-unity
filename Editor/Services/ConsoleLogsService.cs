@@ -199,6 +199,9 @@ namespace McpUnity.Services
             }
         }
         
+        private static MethodInfo s_getCountMethod;
+        private static bool s_getCountMethodResolved;
+
         /// <summary>
         /// Check if console was cleared using reflection (for Unity 2022.3)
         /// </summary>
@@ -206,16 +209,21 @@ namespace McpUnity.Services
         {
             try
             {
-                // Get current log counts using LogEntries (internal Unity API)
-                var logEntriesType = Type.GetType("UnityEditor.LogEntries,UnityEditor");
-                if (logEntriesType == null) return;
-                
-                var getCountMethod = logEntriesType.GetMethod("GetCount",
-                    BindingFlags.Public | BindingFlags.Static | BindingFlags.NonPublic);
-                if (getCountMethod == null) return;
-                
-                int currentTotalCount = (int)getCountMethod.Invoke(null, null);
-                        
+                if (!s_getCountMethodResolved)
+                {
+                    Type logEntriesType = Type.GetType("UnityEditor.LogEntries,UnityEditor");
+                    if (logEntriesType != null)
+                    {
+                        s_getCountMethod = logEntriesType.GetMethod("GetCount",
+                            BindingFlags.Public | BindingFlags.Static | BindingFlags.NonPublic);
+                    }
+                    s_getCountMethodResolved = true;
+                }
+
+                if (s_getCountMethod == null) return;
+
+                int currentTotalCount = (int)s_getCountMethod.Invoke(null, null);
+
                 // If we had logs before, but now we don't, console was likely cleared
                 if (currentTotalCount == 0 && _logEntries.Count > 0)
                 {

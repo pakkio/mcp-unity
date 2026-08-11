@@ -327,7 +327,7 @@ namespace McpUnity.Tools
 
             // Save the material as an asset
             AssetDatabase.CreateAsset(material, savePath);
-            AssetDatabase.SaveAssets();
+            AssetDatabase.SaveAssetIfDirty(material);
 
             McpLogger.LogInfo($"[MCP Unity] Created material '{name}' with shader '{shaderName}' at '{savePath}'");
 
@@ -347,25 +347,24 @@ namespace McpUnity.Tools
             Shader shader = material.shader;
             int propertyCount = shader.GetPropertyCount();
 
+            var propDict = new Dictionary<string, ShaderPropertyType>(propertyCount);
+            for (int i = 0; i < propertyCount; i++)
+            {
+                propDict[shader.GetPropertyName(i)] = shader.GetPropertyType(i);
+            }
+
             foreach (var prop in properties.Properties())
             {
                 string propName = prop.Name;
                 JToken propValue = prop.Value;
 
-                // Find the property in the shader
-                for (int i = 0; i < propertyCount; i++)
+                if (propDict.TryGetValue(propName, out ShaderPropertyType propType))
                 {
-                    string shaderPropName = shader.GetPropertyName(i);
-                    if (shaderPropName == propName)
-                    {
-                        ShaderPropertyType propType = shader.GetPropertyType(i);
-                        object value = MaterialToolUtils.ConvertPropertyValue(propValue, propType);
+                    object value = MaterialToolUtils.ConvertPropertyValue(propValue, propType);
 
-                        if (value != null)
-                        {
-                            SetMaterialProperty(material, propName, propType, value);
-                        }
-                        break;
+                    if (value != null)
+                    {
+                        SetMaterialProperty(material, propName, propType, value);
                     }
                 }
             }
@@ -590,32 +589,28 @@ namespace McpUnity.Tools
             List<string> modifiedProperties = new List<string>();
             List<string> unknownProperties = new List<string>();
 
+            var propDict = new Dictionary<string, ShaderPropertyType>(propertyCount);
+            for (int i = 0; i < propertyCount; i++)
+            {
+                propDict[shader.GetPropertyName(i)] = shader.GetPropertyType(i);
+            }
+
             foreach (var prop in properties.Properties())
             {
                 string propName = prop.Name;
                 JToken propValue = prop.Value;
-                bool found = false;
 
-                // Find the property in the shader
-                for (int i = 0; i < propertyCount; i++)
+                if (propDict.TryGetValue(propName, out ShaderPropertyType propType))
                 {
-                    string shaderPropName = shader.GetPropertyName(i);
-                    if (shaderPropName == propName)
-                    {
-                        found = true;
-                        ShaderPropertyType propType = shader.GetPropertyType(i);
-                        object value = MaterialToolUtils.ConvertPropertyValue(propValue, propType);
+                    object value = MaterialToolUtils.ConvertPropertyValue(propValue, propType);
 
-                        if (value != null)
-                        {
-                            SetMaterialProperty(material, propName, propType, value);
-                            modifiedProperties.Add(propName);
-                        }
-                        break;
+                    if (value != null)
+                    {
+                        SetMaterialProperty(material, propName, propType, value);
+                        modifiedProperties.Add(propName);
                     }
                 }
-
-                if (!found)
+                else
                 {
                     unknownProperties.Add(propName);
                 }
@@ -623,7 +618,7 @@ namespace McpUnity.Tools
 
             // Mark as dirty and save
             EditorUtility.SetDirty(material);
-            AssetDatabase.SaveAssets();
+            AssetDatabase.SaveAssetIfDirty(material);
 
             McpLogger.LogInfo($"[MCP Unity] Modified material '{material.name}': {string.Join(", ", modifiedProperties)}");
 
