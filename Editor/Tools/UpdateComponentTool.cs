@@ -463,7 +463,9 @@ namespace McpUnity.Tools
                         prop.boundsIntValue = boundsInt;
                         return true;
                     case SerializedPropertyType.Generic:
-                        return TrySetGenericProperty(prop, value, out errorMessage);
+                        return prop.isArray
+                            ? TrySetArrayProperty(prop, value, out errorMessage)
+                            : TrySetGenericProperty(prop, value, out errorMessage);
                     case SerializedPropertyType.ArraySize:
                         prop.intValue = value.ToObject<int>();
                         return true;
@@ -603,6 +605,37 @@ namespace McpUnity.Tools
             }
         }
 
+        /// <summary>
+        /// Set a List&lt;T&gt;/array SerializedProperty (e.g. a list of Component references) from a JSON array.
+        /// Each element is routed back through TrySetSerializedPropertyValue, so elements can be object
+        /// references ({instanceId}/{objectPath}/{guid}/{path}), primitives, or nested structs.
+        /// </summary>
+        private bool TrySetArrayProperty(SerializedProperty prop, JToken value, out string errorMessage)
+        {
+            errorMessage = "";
+
+            if (value.Type != JTokenType.Array)
+            {
+                errorMessage = $"Expected array value for '{prop.propertyPath}'";
+                return false;
+            }
+
+            JArray jArray = (JArray)value;
+            prop.arraySize = jArray.Count;
+
+            for (int i = 0; i < jArray.Count; i++)
+            {
+                SerializedProperty element = prop.GetArrayElementAtIndex(i);
+                if (!TrySetSerializedPropertyValue(element, jArray[i], out errorMessage))
+                {
+                    errorMessage = $"Element {i} of '{prop.propertyPath}': {errorMessage}";
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private bool TrySetGenericProperty(SerializedProperty prop, JToken value, out string errorMessage)
         {
             errorMessage = "";
@@ -711,6 +744,15 @@ namespace McpUnity.Tools
             else if (token.Type == JTokenType.Object)
             {
                 JObject obj = (JObject)token;
+                int? sceneInstanceId = obj["instanceId"]?.ToObject<int?>();
+                string sceneObjectPath = obj["objectPath"]?.ToObject<string>();
+
+                // Scene object reference (GameObject or Component), not a persisted asset.
+                if (sceneInstanceId.HasValue || !string.IsNullOrEmpty(sceneObjectPath))
+                {
+                    return TryResolveSceneReference(sceneInstanceId, sceneObjectPath, targetType, out asset, out errorMessage);
+                }
+
                 string guid = obj["guid"]?.ToObject<string>();
                 string path = obj["path"]?.ToObject<string>();
 
@@ -730,7 +772,7 @@ namespace McpUnity.Tools
             }
             else
             {
-                errorMessage = "Object references must be null, an asset path, an asset name, or an object with guid/path";
+                errorMessage = "Object references must be null, an asset path, an asset name, or an object with instanceId/objectPath (scene) or guid/path (asset)";
                 return false;
             }
 
@@ -748,6 +790,63 @@ namespace McpUnity.Tools
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Resolve a reference to a GameObject or Component already in the scene, by instance ID or
+        /// hierarchy path. Unlike assets, scene objects have no AssetDatabase path/GUID.
+        /// If the resolved object doesn't directly satisfy targetType (e.g. targetType is a specific
+        /// Component but the ID/path pointed at its GameObject), falls back to GetComponent(targetType).
+        /// </summary>
+        private bool TryResolveSceneReference(int? instanceId, string objectPath, Type targetType, out UnityEngine.Object asset, out string errorMessage)
+        {
+            asset = null;
+            errorMessage = "";
+
+            UnityEngine.Object resolved;
+            string identifierInfo;
+
+            if (instanceId.HasValue)
+            {
+                resolved = UnityObjectId.ObjectFromId(instanceId.Value);
+                identifierInfo = $"instance ID {instanceId.Value}";
+            }
+            else
+            {
+                JObject findError = GameObjectToolUtils.FindGameObject(null, objectPath, out GameObject foundObject, out identifierInfo);
+                if (findError != null)
+                {
+                    errorMessage = $"Could not find scene object at {identifierInfo}";
+                    return false;
+                }
+
+                resolved = foundObject;
+            }
+
+            if (resolved == null)
+            {
+                errorMessage = $"Could not find scene object with {identifierInfo}";
+                return false;
+            }
+
+            if (targetType.IsInstanceOfType(resolved))
+            {
+                asset = resolved;
+                return true;
+            }
+
+            if (resolved is GameObject go)
+            {
+                Component component = go.GetComponent(targetType);
+                if (component != null)
+                {
+                    asset = component;
+                    return true;
+                }
+            }
+
+            errorMessage = $"Scene object with {identifierInfo} does not match or contain a component of type '{targetType.Name}'";
+            return false;
         }
 
         private static bool TryReadObject(JToken value, string expectedType, out JObject obj, out string errorMessage)

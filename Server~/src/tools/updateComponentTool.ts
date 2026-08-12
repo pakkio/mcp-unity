@@ -7,12 +7,16 @@ import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 // Constants for the tool
 const toolName = 'update_component';
-const toolDescription = 'Updates component fields on a GameObject or adds it to the GameObject if it does not contain the component';
+const toolDescription = 'Updates component fields on a GameObject or adds it to the GameObject if it does not contain the component. ' +
+  'Object-reference fields accept: scene objects via {"instanceId": N} or {"objectPath": "Parent/Child"} (resolves to the GameObject, ' +
+  'or falls back to GetComponent on it if the field type is a specific Component like Rigidbody or Transform); assets via ' +
+  '{"guid": "..."}, {"path": "Assets/..."}, or a plain asset path/name string. List<T>/array fields (e.g. a list of Component ' +
+  'references) accept a JSON array whose elements use any of the above shapes.';
 const paramsSchema = z.object({
   instanceId: z.number().optional().describe('The instance ID of the GameObject to update'),
   objectPath: z.string().optional().describe('The path of the GameObject in the hierarchy to update (alternative to instanceId)'),
   componentName: z.string().describe('The name of the component to update or add'),
-  componentData: z.record(z.any()).optional().describe('An object containing the fields to update on the component (optional)'),
+  componentData: z.record(z.any()).optional().describe('An object containing the fields to update on the component (optional). See tool description for object-reference and array field shapes.'),
   reason: z.string().optional().describe('Optional explanation of why this component is being updated, included in the Unity Console log.')
 });
 
