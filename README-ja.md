@@ -3,8 +3,8 @@
 [![](https://badge.mcpx.dev?status=on 'MCP Enabled')](https://modelcontextprotocol.io/introduction)
 [![](https://img.shields.io/badge/Unity-000000?style=flat&logo=unity&logoColor=white 'Unity')](https://unity.com/releases/editor/archive)
 [![](https://img.shields.io/badge/Node.js-339933?style=flat&logo=nodedotjs&logoColor=white 'Node.js')](https://nodejs.org/en/download/)
-[![](https://img.shields.io/github/stars/CoderGamester/mcp-unity 'Stars')](https://github.com/CoderGamester/mcp-unity/stargazers)
-[![](https://img.shields.io/github/last-commit/CoderGamester/mcp-unity 'Last Commit')](https://github.com/CoderGamester/mcp-unity/commits/main)
+[![](https://img.shields.io/github/stars/pakkio/mcp-unity 'Stars')](https://github.com/pakkio/mcp-unity/stargazers)
+[![](https://img.shields.io/github/last-commit/pakkio/mcp-unity 'Last Commit')](https://github.com/pakkio/mcp-unity/commits/main)
 [![](https://img.shields.io/badge/License-MIT-red.svg 'MIT License')](https://opensource.org/licenses/MIT)
 
 | [🇺🇸英語](README.md) | [🇨🇳簡体中文](README_zh-CN.md) | [🇯🇵日本語](README-ja.md) |
@@ -247,7 +247,7 @@ MCP Unityは、Unityの`Library/PackedCache`フォルダーをワークスペー
 1. Unityパッケージマネージャーを開く（Window > Package Manager）
 2. 左上隅の"+"ボタンをクリック
 3. "Add package from git URL..."を選択
-4. 入力: `https://github.com/CoderGamester/mcp-unity.git`
+4. 入力: `https://github.com/pakkio/mcp-unity.git`
 5. "Add"をクリック
 
 ![package manager](https://github.com/user-attachments/assets/a72bfca4-ae52-48e7-a876-e99c701b0497)
@@ -716,10 +716,7 @@ npm run test:watch
 
 ## サポート & フィードバック
 
-ご質問やサポートが必要な場合は、このリポジトリの[Issue](https://github.com/CoderGamester/mcp-unity/issues)を開くか、以下までご連絡ください：
-- LinkedIn: [![](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white 'LinkedIn')](https://www.linkedin.com/in/miguel-tomas/)
-- Discord: gamester7178
-- Email: game.gamester@gmail.com
+ご質問やサポートが必要な場合は、このリポジトリの[Issue](https://github.com/pakkio/mcp-unity/issues)を開いてください。
 
 ## 貢献
 

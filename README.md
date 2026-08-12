@@ -719,10 +719,7 @@ npm run test:watch
 
 ## Support & Feedback
 
-If you have any questions or need support, please open an [issue](https://github.com/pakkio/mcp-unity/issues) on this repository or alternative you can reach out on:
-- Linkedin: [![](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white 'LinkedIn')](https://www.linkedin.com/in/miguel-tomas/)
-- Discord: gamester7178
-- Email: game.gamester@gmail.com
+If you have any questions or need support, please open an [issue](https://github.com/pakkio/mcp-unity/issues) on this repository.
 
 ## Contributing
 

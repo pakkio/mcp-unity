@@ -549,26 +549,15 @@ namespace McpUnity.Unity
             
             EditorGUILayout.BeginVertical(_boxStyle);
             
-            WrappedLabel("Created by CoderGamester", EditorStyles.boldLabel);
+            WrappedLabel("Created by CoderGamester (Maintained by pakkio)", EditorStyles.boldLabel);
             EditorGUILayout.Space();
             
             WrappedLabel("For issues, feedback, or contributions, please visit:");
             
-            // Begin horizontal layout for buttons
-            EditorGUILayout.BeginHorizontal();
-            
-            if (GUILayout.Button("GitHub: https://github.com/CoderGamester", GUILayout.Height(30)))
+            if (GUILayout.Button("GitHub: pakkio/mcp-unity", GUILayout.Height(30)))
             {
-                Application.OpenURL("https://github.com/CoderGamester");
+                Application.OpenURL("https://github.com/pakkio/mcp-unity");
             }
-            
-            if (GUILayout.Button("LinkedIn: Miguel Tomás", GUILayout.Height(30)))
-            {
-                Application.OpenURL("https://www.linkedin.com/in/miguel-tomas/");
-            }
-            
-            // End horizontal layout
-            EditorGUILayout.EndHorizontal();
             
             EditorGUILayout.EndVertical();
             
