@@ -208,6 +208,7 @@ namespace McpUnity.Tools
             }
 
             EditorUtility.SetDirty(sourceObject.scene.GetRootGameObjects()[0]);
+            UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
 
             return new JObject
             {
@@ -413,6 +414,7 @@ namespace McpUnity.Tools
                 : "root level";
 
             EditorUtility.SetDirty(targetObject);
+            UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
 
             return new JObject
             {

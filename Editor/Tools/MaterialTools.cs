@@ -517,6 +517,7 @@ namespace McpUnity.Tools
 
             // Mark as dirty
             EditorUtility.SetDirty(renderer);
+            UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
             if (PrefabUtility.IsPartOfAnyPrefab(gameObject))
             {
                 PrefabUtility.RecordPrefabInstancePropertyModifications(renderer);
@@ -619,6 +620,7 @@ namespace McpUnity.Tools
             // Mark as dirty and save
             EditorUtility.SetDirty(material);
             AssetDatabase.SaveAssetIfDirty(material);
+            UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
 
             McpLogger.LogInfo($"[MCP Unity] Modified material '{material.name}': {string.Join(", ", modifiedProperties)}");
 

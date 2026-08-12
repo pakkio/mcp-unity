@@ -69,6 +69,7 @@ namespace McpUnity.Tools
             }
 
             EditorUtility.SetDirty(gameObject);
+            UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
 
             // Return result with new position
             return new JObject
@@ -161,6 +162,7 @@ namespace McpUnity.Tools
             }
 
             EditorUtility.SetDirty(gameObject);
+            UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
 
             // Return result with new rotation
             return new JObject
@@ -248,6 +250,7 @@ namespace McpUnity.Tools
             }
 
             EditorUtility.SetDirty(gameObject);
+            UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
 
             // Return result with new scale
             return new JObject
@@ -353,6 +356,7 @@ namespace McpUnity.Tools
             }
 
             EditorUtility.SetDirty(gameObject);
+            UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
 
             // Return result with full transform data
             return new JObject

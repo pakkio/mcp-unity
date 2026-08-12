@@ -125,6 +125,8 @@ namespace McpUnity.Tools
 
             }
 
+            UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+
             // Create the response
             return new JObject
             {

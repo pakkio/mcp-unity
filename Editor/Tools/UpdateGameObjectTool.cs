@@ -125,6 +125,7 @@ namespace McpUnity.Tools
             if (propertiesUpdated)
             {
                 EditorUtility.SetDirty(targetGameObject);
+                UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
             }
 
             // Compose result message and return as JObject (like UpdateComponentTool)
