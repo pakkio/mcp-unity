@@ -880,6 +880,16 @@ namespace McpUnity.Unity
             SetTransformTool setTransformTool = new SetTransformTool();
             _tools.Add(setTransformTool.Name, setTransformTool);
 
+            // Register Spatial Tools
+            GetBoundsTool getBoundsTool = new GetBoundsTool();
+            _tools.Add(getBoundsTool.Name, getBoundsTool);
+
+            PlaceNextToTool placeNextToTool = new PlaceNextToTool();
+            _tools.Add(placeNextToTool.Name, placeNextToTool);
+
+            FindLocalAssetsTool findLocalAssetsTool = new FindLocalAssetsTool();
+            _tools.Add(findLocalAssetsTool.Name, findLocalAssetsTool);
+
             // Register Material Tools
             CreateMaterialTool createMaterialTool = new CreateMaterialTool();
             _tools.Add(createMaterialTool.Name, createMaterialTool);

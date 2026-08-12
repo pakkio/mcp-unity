@@ -155,6 +155,9 @@ If no valid setting is found, Node falls back to:
 - `assign_material` — Assign materials to Renderer components
 - `modify_material` — Modify material properties (colors, floats, textures)
 - `get_material_info` — Get material details including all properties
+- `get_bounds` — Get combined world-space bounds for a GameObject
+- `place_next_to` — Place one GameObject next to another using bounds and distance
+- `find_local_assets` — Find assets in the Unity project by name or extension
 
 ### Available apps (current)
 - `show_unity_dashboard` — Open the Unity dashboard MCP App in VS Code
