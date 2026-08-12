@@ -433,6 +433,49 @@ namespace McpUnity.Tools
                 return true;
             }
 
+            // Handle arrays and lists for reflection fallback path
+            if (token.Type == JTokenType.Array)
+            {
+                if (targetType.IsArray)
+                {
+                    Type elementType = targetType.GetElementType();
+                    JArray jArray = (JArray)token;
+                    Array arrayResult = Array.CreateInstance(elementType, jArray.Count);
+                    for (int i = 0; i < jArray.Count; i++)
+                    {
+                        if (TryConvertJTokenToValue(jArray[i], elementType, out object val, out errorMessage))
+                        {
+                            arrayResult.SetValue(val, i);
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                    value = arrayResult;
+                    return true;
+                }
+                else if (targetType.IsGenericType && (targetType.GetGenericTypeDefinition() == typeof(List<>) || targetType.GetGenericTypeDefinition() == typeof(System.Collections.Generic.IList<>)))
+                {
+                    Type elementType = targetType.GetGenericArguments()[0];
+                    JArray jArray = (JArray)token;
+                    var listResult = (System.Collections.IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType));
+                    for (int i = 0; i < jArray.Count; i++)
+                    {
+                        if (TryConvertJTokenToValue(jArray[i], elementType, out object val, out errorMessage))
+                        {
+                            listResult.Add(val);
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                    value = listResult;
+                    return true;
+                }
+            }
+
             // Handle Unity Vector types
             if (targetType == typeof(Vector2) && token.Type == JTokenType.Object)
             {

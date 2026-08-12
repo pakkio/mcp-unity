@@ -842,6 +842,37 @@ namespace McpUnity.Unity
             // Register ExportPackageTool
             ExportPackageTool exportPackageTool = new ExportPackageTool();
             _tools.Add(exportPackageTool.Name, exportPackageTool);
+
+            // Register Asset Management Tools
+            DeleteAssetTool deleteAssetTool = new DeleteAssetTool();
+            _tools.Add(deleteAssetTool.Name, deleteAssetTool);
+
+            RenameAssetTool renameAssetTool = new RenameAssetTool();
+            _tools.Add(renameAssetTool.Name, renameAssetTool);
+
+            CreateFolderTool createFolderTool = new CreateFolderTool();
+            _tools.Add(createFolderTool.Name, createFolderTool);
+
+            // Register Build and Analysis Tools
+            BuildProjectTool buildProjectTool = new BuildProjectTool();
+            _tools.Add(buildProjectTool.Name, buildProjectTool);
+
+            GetCompilationErrorsTool getCompilationErrorsTool = new GetCompilationErrorsTool(_consoleLogsService);
+            _tools.Add(getCompilationErrorsTool.Name, getCompilationErrorsTool);
+
+            FindScriptReferencesTool findScriptReferencesTool = new FindScriptReferencesTool();
+            _tools.Add(findScriptReferencesTool.Name, findScriptReferencesTool);
+
+            // Register Physics and Component Tools
+            RaycastQueryTool raycastQueryTool = new RaycastQueryTool();
+            _tools.Add(raycastQueryTool.Name, raycastQueryTool);
+
+            CopyComponentTool copyComponentTool = new CopyComponentTool();
+            _tools.Add(copyComponentTool.Name, copyComponentTool);
+
+            // Register Debug Draw Tool
+            DrawSceneGizmoTool drawSceneGizmoTool = new DrawSceneGizmoTool();
+            _tools.Add(drawSceneGizmoTool.Name, drawSceneGizmoTool);
             
             // Register GetGameObjectTool
             GetGameObjectTool getGameObjectTool = new GetGameObjectTool();

@@ -163,6 +163,15 @@ If no valid setting is found, Node falls back to:
 - `get_floor_height` — Raycast downward to find ground height at a position
 - `get_nearby_objects` — Find GameObjects with colliders within a radius
 - `frame_camera_on` — Move the Scene view camera to frame a GameObject
+- `delete_asset` — Deletes assets/folders from the project
+- `rename_asset` — Renames assets/folders in the project
+- `create_folder` — Creates folders in the project
+- `build_project` — Builds the Unity project
+- `get_compilation_errors` — Gets C# compilation errors and warnings
+- `find_script_references` — Finds references to a C# class/script in scene GameObjects
+- `raycast_query` — Executes a physics raycast in the scene
+- `copy_component` — Copies a component from one GameObject to another
+- `draw_scene_gizmo` — Draws a temporary debug shape in the scene view
 
 ### Available apps (current)
 - `show_unity_dashboard` — Open the Unity dashboard MCP App in VS Code
