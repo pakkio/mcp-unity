@@ -158,6 +158,11 @@ If no valid setting is found, Node falls back to:
 - `get_bounds` — Get combined world-space bounds for a GameObject
 - `place_next_to` — Place one GameObject next to another using bounds and distance
 - `find_local_assets` — Find assets in the Unity project by name or extension
+- `import_local_file` — Copy an external file into Assets/ and import it
+- `measure_distance` — Measure distance between two GameObjects (center and edge)
+- `get_floor_height` — Raycast downward to find ground height at a position
+- `get_nearby_objects` — Find GameObjects with colliders within a radius
+- `frame_camera_on` — Move the Scene view camera to frame a GameObject
 
 ### Available apps (current)
 - `show_unity_dashboard` — Open the Unity dashboard MCP App in VS Code

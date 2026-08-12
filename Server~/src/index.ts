@@ -28,7 +28,7 @@ import { registerTransformTools } from './tools/transformTools.js';
 import { registerCreateMaterialTool, registerAssignMaterialTool, registerModifyMaterialTool, registerGetMaterialInfoTool } from './tools/materialTools.js';
 import { registerDuplicateGameObjectTool, registerDeleteGameObjectTool, registerReparentGameObjectTool, registerSetSiblingIndexTool } from './tools/gameObjectTools.js';
 import { registerCaptureScreenshotTool } from './tools/captureScreenshotTool.js';
-import { registerGetBoundsTool, registerPlaceNextToTool, registerFindLocalAssetsTool } from './tools/spatialTools.js';
+import { registerGetBoundsTool, registerPlaceNextToTool, registerFindLocalAssetsTool, registerImportLocalFileTool, registerMeasureDistanceTool, registerGetFloorHeightTool, registerGetNearbyObjectsTool, registerFrameCameraOnTool } from './tools/spatialTools.js';
 import { registerBatchExecuteTool } from './tools/batchExecuteTool.js';
 import { registerShowUnityDashboardTool } from './tools/showUnityDashboardTool.js';
 import { registerGetScenesHierarchyTool } from './tools/getScenesHierarchyTool.js';
@@ -100,6 +100,11 @@ registerCaptureScreenshotTool(server, mcpUnity, toolLogger);
 registerGetBoundsTool(server, mcpUnity, toolLogger);
 registerPlaceNextToTool(server, mcpUnity, toolLogger);
 registerFindLocalAssetsTool(server, mcpUnity, toolLogger);
+registerImportLocalFileTool(server, mcpUnity, toolLogger);
+registerMeasureDistanceTool(server, mcpUnity, toolLogger);
+registerGetFloorHeightTool(server, mcpUnity, toolLogger);
+registerGetNearbyObjectsTool(server, mcpUnity, toolLogger);
+registerFrameCameraOnTool(server, mcpUnity, toolLogger);
 
 // Register Material Tools
 registerCreateMaterialTool(server, mcpUnity, toolLogger);

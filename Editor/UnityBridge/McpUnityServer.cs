@@ -887,8 +887,24 @@ namespace McpUnity.Unity
             PlaceNextToTool placeNextToTool = new PlaceNextToTool();
             _tools.Add(placeNextToTool.Name, placeNextToTool);
 
-            FindLocalAssetsTool findLocalAssetsTool = new FindLocalAssetsTool();
+FindLocalAssetsTool findLocalAssetsTool = new FindLocalAssetsTool();
             _tools.Add(findLocalAssetsTool.Name, findLocalAssetsTool);
+
+            // Register Import & Spatial Query Tools
+            ImportLocalFileTool importLocalFileTool = new ImportLocalFileTool();
+            _tools.Add(importLocalFileTool.Name, importLocalFileTool);
+
+            MeasureDistanceTool measureDistanceTool = new MeasureDistanceTool();
+            _tools.Add(measureDistanceTool.Name, measureDistanceTool);
+
+            GetFloorHeightTool getFloorHeightTool = new GetFloorHeightTool();
+            _tools.Add(getFloorHeightTool.Name, getFloorHeightTool);
+
+            GetNearbyObjectsTool getNearbyObjectsTool = new GetNearbyObjectsTool();
+            _tools.Add(getNearbyObjectsTool.Name, getNearbyObjectsTool);
+
+            FrameCameraOnTool frameCameraOnTool = new FrameCameraOnTool();
+            _tools.Add(frameCameraOnTool.Name, frameCameraOnTool);
 
             // Register Material Tools
             CreateMaterialTool createMaterialTool = new CreateMaterialTool();
