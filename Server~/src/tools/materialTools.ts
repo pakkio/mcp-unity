@@ -110,7 +110,8 @@ const assignMaterialParamsSchema = z.object({
   instanceId: z.number().optional().describe('The instance ID of the GameObject'),
   objectPath: z.string().optional().describe('The path of the GameObject in the hierarchy (alternative to instanceId)'),
   materialPath: z.string().describe('The asset path to the material (e.g., "Assets/Materials/MyMaterial.mat")'),
-  slot: z.number().int().min(0).optional().default(0).describe('The material slot index (default: 0)')
+  slot: z.number().int().min(0).optional().default(0).describe('The material slot index (default: 0)'),
+  reason: z.string().optional().describe('Optional explanation of why this material is being assigned, included in the Unity Console log.')
 });
 
 /**
@@ -159,7 +160,8 @@ async function assignMaterialHandler(mcpUnity: McpUnity, params: any): Promise<C
       instanceId: params.instanceId,
       objectPath: params.objectPath,
       materialPath: params.materialPath,
-      slot: params.slot ?? 0
+      slot: params.slot ?? 0,
+      reason: params.reason
     }
   });
 
@@ -186,7 +188,8 @@ const modifyMaterialToolName = 'modify_material';
 const modifyMaterialToolDescription = 'Modifies properties of an existing material. Supports colors (e.g., _Color), floats (e.g., _Metallic), and textures (e.g., _MainTex path)';
 const modifyMaterialParamsSchema = z.object({
   materialPath: z.string().describe('The asset path to the material (e.g., "Assets/Materials/MyMaterial.mat")'),
-  properties: z.record(z.any()).describe('Property name to value mapping. Colors: {r,g,b,a}, Vectors: {x,y,z,w}, Floats: number, Textures: asset path string')
+  properties: z.record(z.any()).describe('Property name to value mapping. Colors: {r,g,b,a}, Vectors: {x,y,z,w}, Floats: number, Textures: asset path string'),
+  reason: z.string().optional().describe('Optional explanation of why this material is being modified, included in the Unity Console log.')
 });
 
 /**
@@ -232,7 +235,8 @@ async function modifyMaterialHandler(mcpUnity: McpUnity, params: any): Promise<C
     method: modifyMaterialToolName,
     params: {
       materialPath: params.materialPath,
-      properties: params.properties
+      properties: params.properties,
+      reason: params.reason
     }
   });
 

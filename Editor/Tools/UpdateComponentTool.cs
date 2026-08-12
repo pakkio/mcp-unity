@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Reflection;
 using McpUnity.Unity;
 using McpUnity.Utils;
@@ -30,6 +31,7 @@ namespace McpUnity.Tools
             string objectPath = parameters["objectPath"]?.ToObject<string>();
             string componentName = parameters["componentName"]?.ToObject<string>();
             JObject componentData = parameters["componentData"] as JObject;
+            string reason = parameters["reason"]?.ToObject<string>();
             
             // Validate parameters - require either instanceId or objectPath
             if (!instanceId.HasValue && string.IsNullOrEmpty(objectPath))
@@ -126,6 +128,11 @@ namespace McpUnity.Tools
             }
 
             UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+
+            string fieldSummary = componentData != null && componentData.Count > 0
+                ? string.Join(", ", componentData.Properties().Select(p => p.Name))
+                : "no fields";
+            McpLogger.LogInfo($"{Name}: updated component '{componentName}' on '{gameObject.name}' ({fieldSummary})" + (reason != null ? $" — {reason}" : ""));
 
             // Create the response
             return new JObject

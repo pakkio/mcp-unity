@@ -48,6 +48,7 @@ namespace McpUnity.Tools
             // Get space and relative flags
             string space = parameters["space"]?.ToObject<string>() ?? "world";
             bool relative = parameters["relative"]?.ToObject<bool>() ?? false;
+            string reason = parameters["reason"]?.ToObject<string>();
 
             // Record undo
             Undo.RecordObject(transform, "Move GameObject");
@@ -70,6 +71,8 @@ namespace McpUnity.Tools
 
             EditorUtility.SetDirty(gameObject);
             UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+
+            McpLogger.LogInfo($"{Name}: moved '{gameObject.name}' to {transform.position}" + (reason != null ? $" — {reason}" : ""));
 
             // Return result with new position
             return new JObject
@@ -141,6 +144,7 @@ namespace McpUnity.Tools
             // Get space and relative flags
             string space = parameters["space"]?.ToObject<string>() ?? "world";
             bool relative = parameters["relative"]?.ToObject<bool>() ?? false;
+            string reason = parameters["reason"]?.ToObject<string>();
 
             // Record undo
             Undo.RecordObject(transform, "Rotate GameObject");
@@ -163,6 +167,8 @@ namespace McpUnity.Tools
 
             EditorUtility.SetDirty(gameObject);
             UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+
+            McpLogger.LogInfo($"{Name}: rotated '{gameObject.name}' to {transform.eulerAngles}" + (reason != null ? $" — {reason}" : ""));
 
             // Return result with new rotation
             return new JObject
@@ -233,6 +239,7 @@ namespace McpUnity.Tools
 
             // Get relative flag
             bool relative = parameters["relative"]?.ToObject<bool>() ?? false;
+            string reason = parameters["reason"]?.ToObject<string>();
 
             // Record undo
             Undo.RecordObject(transform, "Scale GameObject");
@@ -251,6 +258,8 @@ namespace McpUnity.Tools
 
             EditorUtility.SetDirty(gameObject);
             UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+
+            McpLogger.LogInfo($"{Name}: scaled '{gameObject.name}' to {transform.localScale}" + (reason != null ? $" — {reason}" : ""));
 
             // Return result with new scale
             return new JObject
@@ -310,6 +319,7 @@ namespace McpUnity.Tools
             // Get space flag (applies to position and rotation)
             string space = parameters["space"]?.ToObject<string>() ?? "world";
             bool isLocal = space.ToLower() == "local";
+            string reason = parameters["reason"]?.ToObject<string>();
 
             // Record undo
             Undo.RecordObject(transform, "Set Transform");
@@ -357,6 +367,8 @@ namespace McpUnity.Tools
 
             EditorUtility.SetDirty(gameObject);
             UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+
+            McpLogger.LogInfo($"{Name}: set transform of '{gameObject.name}' (pos={transform.position}, rot={transform.eulerAngles}, scale={transform.localScale})" + (reason != null ? $" — {reason}" : ""));
 
             // Return result with full transform data
             return new JObject

@@ -449,6 +449,7 @@ namespace McpUnity.Tools
             string objectPath = parameters["objectPath"]?.ToObject<string>();
             string materialPath = parameters["materialPath"]?.ToObject<string>();
             int slot = parameters["slot"]?.ToObject<int?>() ?? 0;
+            string reason = parameters["reason"]?.ToObject<string>();
 
             // Validate parameters
             if (!instanceId.HasValue && string.IsNullOrEmpty(objectPath))
@@ -523,7 +524,7 @@ namespace McpUnity.Tools
                 PrefabUtility.RecordPrefabInstancePropertyModifications(renderer);
             }
 
-            McpLogger.LogInfo($"[MCP Unity] Assigned material '{material.name}' to '{gameObject.name}' at slot {slot}");
+            McpLogger.LogInfo($"[MCP Unity] Assigned material '{material.name}' to '{gameObject.name}' at slot {slot}" + (reason != null ? $" — {reason}" : ""));
 
             return new JObject
             {
@@ -553,6 +554,7 @@ namespace McpUnity.Tools
             // Extract parameters
             string materialPath = parameters["materialPath"]?.ToObject<string>();
             JObject properties = parameters["properties"] as JObject;
+            string reason = parameters["reason"]?.ToObject<string>();
 
             // Validate parameters
             if (string.IsNullOrEmpty(materialPath))
@@ -622,7 +624,7 @@ namespace McpUnity.Tools
             AssetDatabase.SaveAssetIfDirty(material);
             UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
 
-            McpLogger.LogInfo($"[MCP Unity] Modified material '{material.name}': {string.Join(", ", modifiedProperties)}");
+            McpLogger.LogInfo($"[MCP Unity] Modified material '{material.name}': {string.Join(", ", modifiedProperties)}" + (reason != null ? $" — {reason}" : ""));
 
             JObject result = new JObject
             {

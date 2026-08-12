@@ -26,7 +26,8 @@ const moveParamsSchema = z.object({
   objectPath: z.string().optional().describe('The path of the GameObject in the hierarchy (alternative to instanceId)'),
   position: createVector3Schema().describe('The target position'),
   space: z.enum(['world', 'local']).default('world').describe('Coordinate space: "world" or "local"'),
-  relative: z.boolean().default(false).describe('If true, adds to current position instead of setting absolute position')
+  relative: z.boolean().default(false).describe('If true, adds to current position instead of setting absolute position'),
+  reason: z.string().optional().describe('Optional explanation of why this move is being made, included in the Unity Console log.')
 });
 
 /**
@@ -63,7 +64,8 @@ async function moveToolHandler(mcpUnity: McpUnity, params: z.infer<typeof movePa
       objectPath: params.objectPath,
       position: params.position,
       space: params.space,
-      relative: params.relative
+      relative: params.relative,
+      reason: params.reason
     }
   });
 
@@ -93,7 +95,8 @@ const rotateParamsSchema = z.object({
   objectPath: z.string().optional().describe('The path of the GameObject in the hierarchy (alternative to instanceId)'),
   rotation: createVector3Schema().describe('The rotation in Euler angles (degrees)'),
   space: z.enum(['world', 'local']).default('world').describe('Coordinate space: "world" or "local"'),
-  relative: z.boolean().default(false).describe('If true, adds to current rotation instead of setting absolute rotation')
+  relative: z.boolean().default(false).describe('If true, adds to current rotation instead of setting absolute rotation'),
+  reason: z.string().optional().describe('Optional explanation of why this rotation is being made, included in the Unity Console log.')
 });
 
 /**
@@ -130,7 +133,8 @@ async function rotateToolHandler(mcpUnity: McpUnity, params: z.infer<typeof rota
       objectPath: params.objectPath,
       rotation: params.rotation,
       space: params.space,
-      relative: params.relative
+      relative: params.relative,
+      reason: params.reason
     }
   });
 
@@ -159,7 +163,8 @@ const scaleParamsSchema = z.object({
   instanceId: z.number().optional().describe('The instance ID of the GameObject to scale'),
   objectPath: z.string().optional().describe('The path of the GameObject in the hierarchy (alternative to instanceId)'),
   scale: createVector3Schema().describe('The scale values'),
-  relative: z.boolean().default(false).describe('If true, multiplies current scale instead of setting absolute scale')
+  relative: z.boolean().default(false).describe('If true, multiplies current scale instead of setting absolute scale'),
+  reason: z.string().optional().describe('Optional explanation of why this scale change is being made, included in the Unity Console log.')
 });
 
 /**
@@ -195,7 +200,8 @@ async function scaleToolHandler(mcpUnity: McpUnity, params: z.infer<typeof scale
       instanceId: params.instanceId,
       objectPath: params.objectPath,
       scale: params.scale,
-      relative: params.relative
+      relative: params.relative,
+      reason: params.reason
     }
   });
 
@@ -227,7 +233,8 @@ function createSetTransformParamsShape() {
     position: createVector3Schema().optional().describe('The position to set'),
     rotation: createVector3Schema().optional().describe('The rotation in Euler angles (degrees)'),
     scale: createVector3Schema().optional().describe('The scale to set'),
-    space: z.enum(['world', 'local']).default('world').describe('Coordinate space for position and rotation: "world" or "local"')
+    space: z.enum(['world', 'local']).default('world').describe('Coordinate space for position and rotation: "world" or "local"'),
+    reason: z.string().optional().describe('Optional explanation of why this transform change is being made, included in the Unity Console log.')
   };
 }
 
@@ -282,7 +289,8 @@ async function setTransformToolHandler(mcpUnity: McpUnity, params: any): Promise
       position: params.position,
       rotation: params.rotation,
       scale: params.scale,
-      space: params.space
+      space: params.space,
+      reason: params.reason
     }
   });
 

@@ -19,6 +19,7 @@ const paramsSchema = z.object({
     isStatic: z.boolean().optional().describe('Set the static state of the GameObject (GameObject.isStatic = value)'),
   }).describe('An object containing the fields to update on the GameObject. If the GameObject does not exist at objectPath, it will be created.')
     .refine(data => Object.keys(data).length > 0, { message: 'gameObjectData must contain at least one property to update.' }),
+  reason: z.string().optional().describe('Optional explanation of why this GameObject is being updated, included in the Unity Console log.'),
 });
 
 /**
@@ -74,6 +75,7 @@ async function toolHandler(mcpUnity: McpUnity, params: any): Promise<CallToolRes
           instanceId: params.instanceId,
           objectPath: params.objectPath,
           gameObjectData: params.gameObjectData,
+          reason: params.reason,
         }
       });
   

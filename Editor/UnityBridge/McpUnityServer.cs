@@ -859,6 +859,14 @@ namespace McpUnity.Unity
             ReparentGameObjectTool reparentGameObjectTool = new ReparentGameObjectTool();
             _tools.Add(reparentGameObjectTool.Name, reparentGameObjectTool);
 
+            // Register SetSiblingIndexTool
+            SetSiblingIndexTool setSiblingIndexTool = new SetSiblingIndexTool();
+            _tools.Add(setSiblingIndexTool.Name, setSiblingIndexTool);
+
+            // Register CaptureScreenshotTool
+            CaptureScreenshotTool captureScreenshotTool = new CaptureScreenshotTool();
+            _tools.Add(captureScreenshotTool.Name, captureScreenshotTool);
+
             // Register Transform Tools
             MoveGameObjectTool moveGameObjectTool = new MoveGameObjectTool();
             _tools.Add(moveGameObjectTool.Name, moveGameObjectTool);

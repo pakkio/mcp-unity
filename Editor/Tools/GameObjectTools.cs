@@ -133,6 +133,7 @@ namespace McpUnity.Tools
             string newParentPath = parameters["newParent"]?.ToObject<string>();
             int? newParentId = parameters["newParentId"]?.ToObject<int?>();
             int count = parameters["count"]?.ToObject<int?>() ?? 1;
+            string reason = parameters["reason"]?.ToObject<string>();
 
             // Validate count
             if (count < 1 || count > 100)
@@ -177,7 +178,15 @@ namespace McpUnity.Tools
 
             for (int i = 0; i < count; i++)
             {
-                GameObject duplicate = UnityEngine.Object.Instantiate(sourceObject);
+                // Instantiate with the original's parent so the clone's local transform is interpreted
+                // in the correct space from the start. Instantiating without a parent (the previous
+                // behavior) placed the clone at scene root, which silently corrupted position/rotation/
+                // scale for any object nested under a non-identity parent chain (e.g. a scaled import root).
+                Transform sourceParent = sourceObject.transform.parent;
+                GameObject duplicate = UnityEngine.Object.Instantiate(sourceObject, sourceParent);
+                duplicate.transform.localPosition = sourceObject.transform.localPosition;
+                duplicate.transform.localRotation = sourceObject.transform.localRotation;
+                duplicate.transform.localScale = sourceObject.transform.localScale;
                 Undo.RegisterCreatedObjectUndo(duplicate, $"Duplicate {sourceObject.name}");
 
                 // Set name
@@ -210,13 +219,16 @@ namespace McpUnity.Tools
             EditorUtility.SetDirty(sourceObject.scene.GetRootGameObjects()[0]);
             UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
 
+            string duplicateMessage = count == 1
+                ? $"Successfully duplicated GameObject '{sourceObject.name}'."
+                : $"Successfully created {count} duplicates of GameObject '{sourceObject.name}'.";
+            McpLogger.LogInfo($"{Name}: {duplicateMessage}" + (reason != null ? $" — {reason}" : ""));
+
             return new JObject
             {
                 ["success"] = true,
                 ["type"] = "text",
-                ["message"] = count == 1
-                    ? $"Successfully duplicated GameObject '{sourceObject.name}'."
-                    : $"Successfully created {count} duplicates of GameObject '{sourceObject.name}'.",
+                ["message"] = duplicateMessage,
                 ["duplicatedObjects"] = duplicatedObjects
             };
         }
@@ -239,6 +251,7 @@ namespace McpUnity.Tools
             int? instanceId = parameters["instanceId"]?.ToObject<int?>();
             string objectPath = parameters["objectPath"]?.ToObject<string>();
             bool includeChildren = parameters["includeChildren"]?.ToObject<bool?>() ?? true;
+            string reason = parameters["reason"]?.ToObject<string>();
 
             // Find target GameObject
             JObject error = GameObjectToolUtils.FindGameObject(instanceId, objectPath, out GameObject targetObject, out string identifierInfo);
@@ -267,14 +280,18 @@ namespace McpUnity.Tools
 
             // Delete the GameObject
             Undo.DestroyObjectImmediate(targetObject);
+            UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+
+            string deleteMessage = includeChildren && childCount > 0
+                ? $"Successfully deleted GameObject '{deletedName}' and {childCount} children."
+                : $"Successfully deleted GameObject '{deletedName}'.";
+            McpLogger.LogInfo($"{Name}: {deleteMessage}" + (reason != null ? $" — {reason}" : ""));
 
             return new JObject
             {
                 ["success"] = true,
                 ["type"] = "text",
-                ["message"] = includeChildren && childCount > 0
-                    ? $"Successfully deleted GameObject '{deletedName}' and {childCount} children."
-                    : $"Successfully deleted GameObject '{deletedName}'.",
+                ["message"] = deleteMessage,
                 ["deletedPath"] = deletedPath,
                 ["childrenPreserved"] = !includeChildren && childCount > 0 ? childCount : 0
             };
@@ -300,6 +317,7 @@ namespace McpUnity.Tools
             string newParentPath = parameters["newParent"]?.ToObject<string>();
             int? newParentId = parameters["newParentId"]?.ToObject<int?>();
             bool worldPositionStays = parameters["worldPositionStays"]?.ToObject<bool?>() ?? true;
+            string reason = parameters["reason"]?.ToObject<string>();
 
             // Find target GameObject
             JObject error = GameObjectToolUtils.FindGameObject(instanceId, objectPath, out GameObject targetObject, out string identifierInfo);
@@ -416,16 +434,107 @@ namespace McpUnity.Tools
             EditorUtility.SetDirty(targetObject);
             UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
 
+            string reparentMessage = $"Successfully reparented GameObject '{targetObject.name}' to {parentDescription}.";
+            McpLogger.LogInfo($"{Name}: {reparentMessage}" + (reason != null ? $" — {reason}" : ""));
+
             return new JObject
             {
                 ["success"] = true,
                 ["type"] = "text",
-                ["message"] = $"Successfully reparented GameObject '{targetObject.name}' to {parentDescription}.",
+                ["message"] = reparentMessage,
                 ["instanceId"] = UnityObjectId.GetObjectId(targetObject),
                 ["name"] = targetObject.name,
                 ["oldPath"] = oldPath,
                 ["newPath"] = newPath,
                 ["changed"] = true
+            };
+        }
+    }
+
+    /// <summary>
+    /// Tool for reordering a GameObject within its parent's sibling list (Hierarchy order).
+    /// Uses Transform.SetSiblingIndex directly, which reparent_gameobject does not touch.
+    /// </summary>
+    public class SetSiblingIndexTool : McpToolBase
+    {
+        public SetSiblingIndexTool()
+        {
+            Name = "set_sibling_index";
+            Description = "Reorders a GameObject within its parent's children (Hierarchy display order). Supports an absolute index or positioning relative to another sibling.";
+            IsAsync = false;
+        }
+
+        public override JObject Execute(JObject parameters)
+        {
+            int? instanceId = parameters["instanceId"]?.ToObject<int?>();
+            string objectPath = parameters["objectPath"]?.ToObject<string>();
+            int? siblingIndex = parameters["siblingIndex"]?.ToObject<int?>();
+            int? insertAfterInstanceId = parameters["insertAfterInstanceId"]?.ToObject<int?>();
+            int? insertBeforeInstanceId = parameters["insertBeforeInstanceId"]?.ToObject<int?>();
+            string reason = parameters["reason"]?.ToObject<string>();
+
+            // Find target GameObject
+            JObject error = GameObjectToolUtils.FindGameObject(instanceId, objectPath, out GameObject targetObject, out string identifierInfo);
+            if (error != null) return error;
+
+            Transform transform = targetObject.transform;
+            Transform parent = transform.parent;
+            int siblingCount = parent != null ? parent.childCount : targetObject.scene.rootCount;
+
+            int targetIndex;
+
+            if (siblingIndex.HasValue)
+            {
+                targetIndex = Mathf.Clamp(siblingIndex.Value, 0, siblingCount - 1);
+            }
+            else if (insertAfterInstanceId.HasValue || insertBeforeInstanceId.HasValue)
+            {
+                int? anchorId = insertAfterInstanceId ?? insertBeforeInstanceId;
+                GameObject anchorObject = UnityObjectId.ObjectFromId(anchorId.Value) as GameObject;
+                if (anchorObject == null)
+                {
+                    return McpUnitySocketHandler.CreateErrorResponse(
+                        $"Anchor GameObject not found with instance ID {anchorId.Value}.",
+                        "not_found_error"
+                    );
+                }
+
+                if (anchorObject.transform.parent != parent)
+                {
+                    return McpUnitySocketHandler.CreateErrorResponse(
+                        $"Anchor GameObject '{anchorObject.name}' is not a sibling of '{targetObject.name}' (they must share the same parent).",
+                        "validation_error"
+                    );
+                }
+
+                int anchorIndex = anchorObject.transform.GetSiblingIndex();
+                targetIndex = insertAfterInstanceId.HasValue ? anchorIndex + 1 : anchorIndex;
+            }
+            else
+            {
+                return McpUnitySocketHandler.CreateErrorResponse(
+                    "One of 'siblingIndex', 'insertAfterInstanceId', or 'insertBeforeInstanceId' must be provided.",
+                    "validation_error"
+                );
+            }
+
+            Undo.RecordObject(transform, "Set Sibling Index");
+            transform.SetSiblingIndex(targetIndex);
+            EditorUtility.SetDirty(targetObject);
+            UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+
+            int finalIndex = transform.GetSiblingIndex();
+            string message = $"Set sibling index of '{targetObject.name}' to {finalIndex}.";
+            McpLogger.LogInfo($"{Name}: {message}" + (reason != null ? $" — {reason}" : ""));
+
+            return new JObject
+            {
+                ["success"] = true,
+                ["type"] = "text",
+                ["message"] = message,
+                ["instanceId"] = UnityObjectId.GetObjectId(targetObject),
+                ["name"] = targetObject.name,
+                ["siblingIndex"] = finalIndex
             };
         }
     }

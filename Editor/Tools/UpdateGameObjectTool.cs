@@ -32,6 +32,7 @@ namespace McpUnity.Tools
             int? instanceId = parameters["instanceId"]?.ToObject<int?>();
             string objectPath = parameters["objectPath"]?.ToObject<string>();
             JObject gameObjectData = parameters["gameObjectData"] as JObject;
+            string reason = parameters["reason"]?.ToObject<string>();
 
             string newName = gameObjectData? ["name"]?.ToObject<string>();
             string newTag = gameObjectData? ["tag"]?.ToObject<string>();
@@ -126,6 +127,7 @@ namespace McpUnity.Tools
             {
                 EditorUtility.SetDirty(targetGameObject);
                 UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+                McpLogger.LogInfo($"{Name}: updated '{originalNameForLog}' -> '{targetGameObject.name}'" + (reason != null ? $" — {reason}" : ""));
             }
 
             // Compose result message and return as JObject (like UpdateComponentTool)

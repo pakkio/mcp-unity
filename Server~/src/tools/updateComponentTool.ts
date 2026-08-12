@@ -12,7 +12,8 @@ const paramsSchema = z.object({
   instanceId: z.number().optional().describe('The instance ID of the GameObject to update'),
   objectPath: z.string().optional().describe('The path of the GameObject in the hierarchy to update (alternative to instanceId)'),
   componentName: z.string().describe('The name of the component to update or add'),
-  componentData: z.record(z.any()).optional().describe('An object containing the fields to update on the component (optional)')
+  componentData: z.record(z.any()).optional().describe('An object containing the fields to update on the component (optional)'),
+  reason: z.string().optional().describe('Optional explanation of why this component is being updated, included in the Unity Console log.')
 });
 
 /**
@@ -77,7 +78,8 @@ async function toolHandler(mcpUnity: McpUnity, params: any): Promise<CallToolRes
       instanceId: params.instanceId,
       objectPath: params.objectPath,
       componentName: params.componentName,
-      componentData: params.componentData
+      componentData: params.componentData,
+      reason: params.reason
     }
   });
   
