@@ -4,6 +4,7 @@ import { McpUnity } from '../unity/mcpUnity.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { McpUnityError, ErrorType } from '../utils/errors.js';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { getToolTimeout } from '../utils/timeouts.js';
 
 // Constants for the tool
 const toolName = 'add_package';
@@ -80,7 +81,7 @@ async function toolHandler(mcpUnity: McpUnity, params: any): Promise<CallToolRes
   const response = await mcpUnity.sendRequest({
     method: toolName,
     params
-  });
+  }, { timeout: getToolTimeout(toolName) });
   
   if (!response.success) {
     throw new McpUnityError(

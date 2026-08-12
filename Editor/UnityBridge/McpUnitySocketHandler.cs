@@ -75,6 +75,45 @@ namespace McpUnity.Unity
         }
 
         /// <summary>
+        /// Maximum characters logged for a single request/response payload. Some tool responses
+        /// (e.g. capture_screenshot) carry megabytes of base64 image data; logging that in full
+        /// on every call floods the Unity console and the main thread with string formatting
+        /// work for no diagnostic benefit.
+        /// </summary>
+        private const int MaxLoggedPayloadChars = 2000;
+
+        /// <summary>
+        /// Truncates a payload string for logging, leaving a marker with the omitted length.
+        /// </summary>
+        private static string TruncateForLog(string payload)
+        {
+            if (string.IsNullOrEmpty(payload) || payload.Length <= MaxLoggedPayloadChars)
+            {
+                return payload;
+            }
+
+            return payload.Substring(0, MaxLoggedPayloadChars)
+                + $"... [truncated, {payload.Length - MaxLoggedPayloadChars} more chars]";
+        }
+
+        /// <summary>
+        /// Constant-time string comparison for the auth token, so response timing can't be used
+        /// to guess the configured secret one character at a time.
+        /// </summary>
+        private static bool SecureTokenEquals(string provided, string expected)
+        {
+            if (provided == null || expected == null) return false;
+            if (provided.Length != expected.Length) return false;
+
+            int diff = 0;
+            for (int i = 0; i < expected.Length; i++)
+            {
+                diff |= provided[i] ^ expected[i];
+            }
+            return diff == 0;
+        }
+
+        /// <summary>
         /// Create a standardized error response
         /// </summary>
         /// <param name="message">Error message</param>
@@ -166,6 +205,37 @@ namespace McpUnity.Unity
                 clientName = headers["X-Client-Name"];
             }
 
+            // When remote connections are allowed, the server is reachable by any host on the
+            // network. Require a matching shared secret if one is configured - otherwise any
+            // network peer can drive destructive tools (execute_menu_item, import_local_file,
+            // add_package) with zero authentication.
+            McpUnitySettings settings = McpUnitySettings.Instance;
+            if (settings.AllowRemoteConnections && !string.IsNullOrEmpty(settings.AuthToken))
+            {
+                string providedToken = headers != null && headers.Contains("X-Mcp-Auth-Token")
+                    ? headers["X-Mcp-Auth-Token"]
+                    : null;
+
+                if (!SecureTokenEquals(providedToken, settings.AuthToken))
+                {
+                    McpLogger.LogWarning(
+                        $"Rejected WebSocket connection from client '{(string.IsNullOrEmpty(clientName) ? "Unknown" : clientName)}': missing or invalid X-Mcp-Auth-Token.");
+                    try
+                    {
+                        WebSocket webSocket = Context?.WebSocket;
+                        if (webSocket?.ReadyState == WebSocketState.Open)
+                        {
+                            webSocket.Close(CloseStatusCode.PolicyViolation, "Missing or invalid auth token");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        McpLogger.LogWarning($"Error closing unauthenticated connection: {ex.Message}");
+                    }
+                    return;
+                }
+            }
+
             if (!_server.ShouldTrackClient(_connectionGeneration))
             {
                 CloseUntrackedConnection();
@@ -219,7 +289,7 @@ namespace McpUnity.Unity
                     return;
                 }
 
-                McpLogger.LogInfo($"WebSocket message received: {data}");
+                McpLogger.LogInfo($"WebSocket message received: {TruncateForLog(data)}");
                 JObject requestJson;
                 try
                 {
@@ -260,7 +330,7 @@ namespace McpUnity.Unity
                 JObject jsonRpcResponse = CreateResponse(requestId, responseJson);
                 string responseStr = jsonRpcResponse.ToString(Formatting.None);
 
-                McpLogger.LogInfo($"WebSocket message response for request ID '{requestId}': {responseStr}");
+                McpLogger.LogInfo($"WebSocket message response for request ID '{requestId}': {TruncateForLog(responseStr)}");
 
                 // Send the response back to the client
                 Send(responseStr);

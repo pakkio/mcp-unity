@@ -4,6 +4,7 @@ import { Logger } from '../utils/logger.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { McpUnityError, ErrorType } from '../utils/errors.js';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { getToolTimeout } from '../utils/timeouts.js';
 
 const toolName = 'capture_screenshot';
 const toolDescription = 'Captures a screenshot of the Unity Scene view or a named/main Camera, returned as an image.';
@@ -49,7 +50,7 @@ async function toolHandler(mcpUnity: McpUnity, params: z.infer<typeof paramsSche
       format: params.format,
       jpgQuality: params.jpgQuality,
     }
-  });
+  }, { timeout: getToolTimeout(toolName) });
 
   if (!response.success) {
     throw new McpUnityError(

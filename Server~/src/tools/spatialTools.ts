@@ -3,6 +3,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { McpUnity } from '../unity/mcpUnity.js';
 import { Logger } from '../utils/logger.js';
 import { McpUnityError, ErrorType } from '../utils/errors.js';
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { getToolTimeout } from '../utils/timeouts.js';
 
 const identifierShape = {
   instanceId: z.number().optional().describe('The GameObject instance ID'),
@@ -15,10 +17,24 @@ function validateIdentifier(params: { instanceId?: number; objectPath?: string }
   }
 }
 
-async function callTool(mcpUnity: McpUnity, method: string, params: any, failure: string) {
-  const response = await mcpUnity.sendRequest({ method, params });
+async function callTool(mcpUnity: McpUnity, method: string, params: any, failure: string): Promise<CallToolResult> {
+  const response = await mcpUnity.sendRequest({ method, params }, { timeout: getToolTimeout(method) });
   if (!response.success) throw new McpUnityError(ErrorType.TOOL_EXECUTION, response.message || failure);
-  return { content: [{ type: response.type, text: response.message || failure }] };
+
+  // Return the full structured payload (bounds, assets, objects, etc.), not just the
+  // one-line message - Unity's response carries the actual data these tools exist to fetch.
+  const { success, type, message, ...data } = response;
+  const hasData = Object.keys(data).length > 0;
+
+  return {
+    content: [{
+      type: 'text' as const,
+      text: hasData
+        ? `${message || failure}\n\n${JSON.stringify(data, null, 2)}`
+        : (message || failure)
+    }],
+    structuredContent: hasData ? data : undefined
+  };
 }
 
 const boundsName = 'get_bounds';
@@ -112,13 +128,16 @@ export function registerMeasureDistanceTool(server: McpServer, mcpUnity: McpUnit
 
 const floorName = 'get_floor_height';
 export function registerGetFloorHeightTool(server: McpServer, mcpUnity: McpUnity, logger: Logger) {
-  server.tool(floorName, 'Raycasts downward from a position to find the floor/ground height. Returns the hit point and surface normal.', {
+  server.tool(floorName, 'Raycasts downward from a position to find the floor/ground height. Returns the hit point and surface normal. Supports filtering by layer mask and excluding a specific GameObject\'s own colliders (e.g. the object you\'re about to drop).', {
     position: z.object({
       x: z.number().default(0).describe('X position'),
       y: z.number().default(100).describe('Y position (raycast origin height)'),
       z: z.number().default(0).describe('Z position')
     }).optional().describe('Origin position for the downward raycast'),
-    maxDistance: z.number().min(0.1).default(200).describe('Maximum raycast distance in meters')
+    maxDistance: z.number().min(0.1).default(200).describe('Maximum raycast distance in meters'),
+    layerMask: z.number().int().optional().describe('Unity layer mask to restrict the raycast to (default: all layers configured for raycasts)'),
+    ignoreInstanceId: z.number().optional().describe('Instance ID of a GameObject whose own colliders (and children) should be skipped, e.g. the object being dropped'),
+    ignoreObjectPath: z.string().optional().describe('Hierarchy path alternative to ignoreInstanceId')
   }, async (params) => {
     logger.info(`Executing tool: ${floorName}`, params);
     return callTool(mcpUnity, floorName, params, 'Failed to find floor height');

@@ -1,0 +1,41 @@
+name: Server CI
+
+# Builds and tests the Node MCP bridge (Server~) on every push/PR. Deliberately does NOT run the
+# Unity Editor side: a real Unity EditMode/PlayMode run needs a licensed Unity install
+# (game-ci/unity-test-runner + a UNITY_LICENSE secret), which this workflow does not provision.
+# See Editor/Tests/ for the EditMode suite to run locally via Window > General > Test Runner, or
+# wire up game-ci separately once a CI license is available.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+defaults:
+  run:
+    working-directory: Server~
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: Server~/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test

@@ -50,36 +50,14 @@ namespace McpUnity.Tools
                 );
             }
             
-            // Find the GameObject by instance ID or path
-            GameObject gameObject = null;
-            string identifier = "unknown";
-            
-            if (instanceId.HasValue)
-            {
-                gameObject = UnityObjectId.ObjectFromId(instanceId.Value) as GameObject;
-                identifier = $"ID {instanceId.Value}";
-            }
-            else
-            {
-                // Find by path
-                gameObject = GameObject.Find(objectPath);
-                identifier = $"path '{objectPath}'";
-                
-                if (gameObject == null)
-                {
-                    // Try to find using the Unity Scene hierarchy path
-                    gameObject = FindGameObjectByPath(objectPath);
-                }
-            }
-                    
-            if (gameObject == null)
-            {
-                return McpUnitySocketHandler.CreateErrorResponse(
-                    $"GameObject with path '{objectPath}' or instance ID {instanceId} not found", 
-                    "not_found_error"
-                );
-            }
-            
+            // Find the GameObject by instance ID or path (shared resolver: all loaded scenes,
+            // includes inactive objects - see Editor/Utils/GameObjectResolver.cs)
+            GameObjectResolver.Result findResult = GameObjectResolver.Find(instanceId, objectPath);
+            if (findResult.Error != null) return findResult.Error;
+
+            GameObject gameObject = findResult.GameObject;
+            string identifier = instanceId.HasValue ? $"ID {instanceId.Value}" : $"path '{objectPath}'";
+
             McpLogger.LogInfo($"[MCP Unity] Updating component '{componentName}' on GameObject '{gameObject.name}' (found by {identifier})");
             
             // Try to find the component by name
@@ -141,54 +119,6 @@ namespace McpUnity.Tools
                 ["type"] = "text",
                 ["message"] = $"Successfully updated component '{componentName}' on GameObject '{gameObject.name}'"
             };
-        }
-        
-        /// <summary>
-        /// Find a GameObject by its hierarchy path
-        /// </summary>
-        /// <param name="path">The path to the GameObject (e.g. "Canvas/Panel/Button")</param>
-        /// <returns>The GameObject if found, null otherwise</returns>
-        private GameObject FindGameObjectByPath(string path)
-        {
-            // Split the path by '/'
-            string[] pathParts = path.Split('/');
-            GameObject[] rootGameObjects = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
-            
-            // If the path is empty, return null
-            if (pathParts.Length == 0)
-            {
-                return null;
-            }
-            
-            // Search through all root GameObjects in all scenes
-            foreach (GameObject rootObj in rootGameObjects)
-            {
-                if (rootObj.name == pathParts[0])
-                {
-                    // Found the root object, now traverse down the path
-                    GameObject current = rootObj;
-                    
-                    // Start from index 1 since we've already matched the root
-                    for (int i = 1; i < pathParts.Length; i++)
-                    {
-                        Transform child = current.transform.Find(pathParts[i]);
-                        if (child == null)
-                        {
-                            // Path segment not found
-                            return null;
-                        }
-                        
-                        // Move to the next level
-                        current = child.gameObject;
-                    }
-                    
-                    // If we got here, we found the full path
-                    return current;
-                }
-            }
-            
-            // Not found
-            return null;
         }
         
         /// <summary>

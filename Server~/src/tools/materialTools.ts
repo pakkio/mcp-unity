@@ -343,7 +343,7 @@ async function getMaterialInfoHandler(mcpUnity: McpUnity, params: any): Promise<
       type: 'text',
       text: text
     }],
-    data: {
+    structuredContent: {
       materialName: response.materialName,
       materialPath: response.materialPath,
       shaderName: response.shaderName,

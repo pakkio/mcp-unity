@@ -78,7 +78,7 @@ async function toolHandler(mcpUnity: McpUnity, params: any) {
         text: response.message || "Successfully created scene",
       },
     ],
-    data: {
+    structuredContent: {
       scenePath: response.scenePath,
     },
   };

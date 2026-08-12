@@ -428,9 +428,9 @@ describe('Material Tools', () => {
       const params = { materialPath: 'Assets/Materials/Test.mat' };
       const result = await handler(params);
 
-      expect(result.data).toBeDefined();
-      expect(result.data.materialName).toBe('TestMaterial');
-      expect(result.data.shaderName).toBe('Standard');
+      expect(result.structuredContent).toBeDefined();
+      expect(result.structuredContent.materialName).toBe('TestMaterial');
+      expect(result.structuredContent.shaderName).toBe('Standard');
     });
   });
 });

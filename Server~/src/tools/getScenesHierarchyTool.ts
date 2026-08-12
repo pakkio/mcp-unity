@@ -52,7 +52,7 @@ async function toolHandler(mcpUnity: McpUnity): Promise<CallToolResult> {
         text: JSON.stringify(hierarchy, null, 2),
       },
     ],
-    data: {
+    structuredContent: {
       hierarchy,
     },
   };

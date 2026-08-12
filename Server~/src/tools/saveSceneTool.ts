@@ -59,7 +59,7 @@ async function toolHandler(mcpUnity: McpUnity, params: any) {
       type: response.type,
       text: response.message || 'Successfully saved scene'
     }],
-    data: {
+    structuredContent: {
       scenePath: response.scenePath,
       sceneName: response.sceneName
     }

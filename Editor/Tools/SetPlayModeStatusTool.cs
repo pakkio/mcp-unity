@@ -34,18 +34,34 @@ namespace McpUnity.Tools
                 bool wasPlaying = EditorApplication.isPlaying;
                 bool wasPaused = EditorApplication.isPaused;
 
+                // Target state to report - for 'play'/'stop' this is the intended state, not yet
+                // applied (see deferral note below).
+                bool isPlaying = wasPlaying;
+                bool isPaused = wasPaused;
+                Action deferredTransition = null;
+
                 switch (action)
                 {
                     case "play":
                         if (!EditorApplication.isPlaying)
                         {
-                            // Start play mode
-                            EditorApplication.isPlaying = true;
+                            // Entering play mode synchronously fires ExitingEditMode, which
+                            // unconditionally closes this WebSocket (StopServer, see
+                            // McpUnityServer.OnPlayModeStateChanged) so a client can use fast
+                            // polling to reconnect. Assigning isPlaying here directly races
+                            // that close against this response actually reaching the client -
+                            // observed as "Connection failed" or a timeout despite the action
+                            // succeeding. Deferring the assignment to the next editor tick lets
+                            // the response for THIS request finish sending first.
+                            deferredTransition = () => EditorApplication.isPlaying = true;
+                            isPlaying = true;
+                            isPaused = false;
                         }
                         else if (EditorApplication.isPaused)
                         {
                             // Unpause if already playing
                             EditorApplication.isPaused = false;
+                            isPaused = false;
                         }
                         break;
 
@@ -53,6 +69,7 @@ namespace McpUnity.Tools
                         if (EditorApplication.isPlaying)
                         {
                             EditorApplication.isPaused = !EditorApplication.isPaused;
+                            isPaused = EditorApplication.isPaused;
                         }
                         else
                         {
@@ -66,7 +83,10 @@ namespace McpUnity.Tools
                     case "stop":
                         if (EditorApplication.isPlaying)
                         {
-                            EditorApplication.isPlaying = false;
+                            // Same race as 'play' above: ExitingEditMode fires on exit too.
+                            deferredTransition = () => EditorApplication.isPlaying = false;
+                            isPlaying = false;
+                            isPaused = false;
                         }
                         break;
 
@@ -91,15 +111,12 @@ namespace McpUnity.Tools
                         );
                 }
 
-                // Give Unity a moment to update state
-                bool isPlaying = EditorApplication.isPlaying;
-                bool isPaused = EditorApplication.isPaused;
-
                 var result = new JObject
                 {
                     ["success"] = true,
                     ["type"] = "text",
-                    ["message"] = $"Action '{action}' executed. State: {(isPlaying ? (isPaused ? "Playing (paused)" : "Playing") : "Edit mode")}",
+                    ["message"] = $"Action '{action}' executed. State: {(isPlaying ? (isPaused ? "Playing (paused)" : "Playing") : "Edit mode")}"
+                        + (deferredTransition != null ? " (transition applying on next editor tick)" : ""),
                     ["action"] = action,
                     ["wasPlaying"] = wasPlaying,
                     ["wasPaused"] = wasPaused,
@@ -108,6 +125,11 @@ namespace McpUnity.Tools
                 };
 
                 McpLogger.LogInfo($"Play mode action '{action}' executed. isPlaying={isPlaying}, isPaused={isPaused}");
+
+                if (deferredTransition != null)
+                {
+                    EditorApplication.delayCall += () => deferredTransition();
+                }
 
                 return result;
             }

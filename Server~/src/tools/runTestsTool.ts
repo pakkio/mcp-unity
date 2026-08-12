@@ -4,6 +4,7 @@ import { McpUnity } from '../unity/mcpUnity.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { McpUnityError, ErrorType } from '../utils/errors.js';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { getToolTimeout } from '../utils/timeouts.js';
 
 // Constants for the tool
 const toolName = 'run_tests';
@@ -64,13 +65,13 @@ async function toolHandler(mcpUnity: McpUnity, params: any = {}): Promise<CallTo
   // Create and wait for the test run
   const response = await mcpUnity.sendRequest({
     method: toolName,
-    params: { 
+    params: {
       testMode,
       testFilter,
       returnOnlyFailures,
       returnWithLogs
     }
-  });
+  }, { timeout: getToolTimeout(toolName) });
   
   // Process the test results
   if (!response.success) {
@@ -103,6 +104,13 @@ async function toolHandler(mcpUnity: McpUnity, params: any = {}): Promise<CallTo
           results: testResults
         }, null, 2)
       }
-    ]
+    ],
+    structuredContent: {
+      testCount,
+      passCount,
+      failCount,
+      skipCount,
+      results: testResults
+    }
   };
 }

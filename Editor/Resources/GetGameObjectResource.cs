@@ -63,30 +63,20 @@ namespace McpUnity.Resources
                 };
             }
 
-            GameObject gameObject = null;
-
-            // Try to parse as an instance ID first
-            if (int.TryParse(idOrName, out int instanceId))
-            {
-                // Unity Instance IDs are typically negative, but we'll accept any integer
-                UnityEngine.Object unityObject = UnityObjectId.ObjectFromId(instanceId);
-                gameObject = unityObject as GameObject;
-            }
-            else
-            {
-                // Otherwise, treat it as a name or hierarchical path
-                gameObject = GameObject.Find(idOrName);
-            }
-
-            // Check if the GameObject was found
-            if (gameObject == null)
+            // Shared resolver: all loaded scenes, includes inactive objects (see
+            // Editor/Utils/GameObjectResolver.cs)
+            GameObjectResolver.Result findResult = GameObjectResolver.FindByIdOrName(idOrName);
+            if (findResult.Error != null)
             {
                 return new JObject
                 {
                     ["success"] = false,
-                    ["message"] = $"GameObject with '{idOrName}' reference not found. Make sure the GameObject exists and is loaded in the current scene(s)."
+                    ["message"] = findResult.Error["error"]?["message"]?.ToString()
+                        ?? $"GameObject with '{idOrName}' reference not found. Make sure the GameObject exists and is loaded in the current scene(s)."
                 };
             }
+
+            GameObject gameObject = findResult.GameObject;
 
             int maxDepth = parameters["maxDepth"]?.ToObject<int?>() ?? DefaultMaxChildDepth;
             bool includeComponents = parameters["includeComponents"]?.ToObject<bool?>() ?? true;
@@ -224,9 +214,23 @@ namespace McpUnity.Resources
 
         /// <summary>
         /// Component base types that should never have public properties reflected because some native-backed getters
-        /// can crash the Unity editor before a managed exception is thrown.
+        /// can crash the Unity editor before a managed exception is thrown. Collider is intentionally NOT listed
+        /// here: it goes through GetComponentPropertiesViaSerializedObject below instead of reflection (see that method).
         /// </summary>
         private static readonly Type[] UnsafeDetailedInspectionBaseTypes = new Type[]
+        {
+        };
+
+        /// <summary>
+        /// Component base types whose fields are read via SerializedObject/SerializedProperty instead of
+        /// reflection. Collider and its subclasses (including WheelCollider) have some reflected C# properties
+        /// backed by native getters that can crash the Editor, so they were previously skipped entirely
+        /// ("_skipped": "Detailed property serialization skipped for safety") - callers could write these
+        /// fields via update_component but never read them back. SerializedObject never invokes those getters;
+        /// it reads the same serialized field data update_component already trusts for writes, so it is safe
+        /// where reflection was not.
+        /// </summary>
+        private static readonly Type[] SerializedObjectInspectionBaseTypes = new Type[]
         {
             typeof(Collider)
         };
@@ -304,6 +308,22 @@ namespace McpUnity.Resources
         }
 
         /// <summary>
+        /// Check whether a component type should be inspected via SerializedObject instead of reflection.
+        /// </summary>
+        private static bool ShouldUseSerializedObjectInspection(Type componentType)
+        {
+            foreach (Type baseType in SerializedObjectInspectionBaseTypes)
+            {
+                if (baseType.IsAssignableFrom(componentType))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Get information about the components attached to a GameObject
         /// </summary>
         /// <param name="gameObject">The GameObject to get components from</param>
@@ -341,6 +361,10 @@ namespace McpUnity.Resources
                         {
                             ["_skipped"] = "Detailed property serialization skipped for safety"
                         };
+                    }
+                    else if (ShouldUseSerializedObjectInspection(componentType))
+                    {
+                        componentJson["properties"] = GetComponentPropertiesViaSerializedObject(component);
                     }
                     else
                     {
@@ -450,6 +474,148 @@ namespace McpUnity.Resources
             return propertiesJson;
         }
         
+        /// <summary>
+        /// Dump a component's serialized fields via SerializedObject/SerializedProperty instead of reflection.
+        /// Used for Collider-derived components (see SerializedObjectInspectionBaseTypes) whose reflected
+        /// properties can crash the Editor. Only walks top-level visible properties (does not recurse into
+        /// nested struct fields beyond arrays/lists) to avoid name collisions between sibling structs that
+        /// share field names - a nested struct falls back to a "[TypeName]" marker like the reflection path
+        /// does for types it doesn't recognize.
+        /// </summary>
+        private static JObject GetComponentPropertiesViaSerializedObject(Component component)
+        {
+            JObject result = new JObject();
+
+            try
+            {
+                // SerializedObject owns native memory and is IDisposable. A hierarchy dump can
+                // create one per Collider across hundreds of nodes, so leaking them churns native
+                // memory for the duration of the request.
+                using (SerializedObject serializedObject = new SerializedObject(component))
+                {
+                    SerializedProperty iterator = serializedObject.GetIterator();
+
+                    bool enterChildren = true;
+                    while (iterator.NextVisible(enterChildren))
+                    {
+                        enterChildren = false;
+
+                        if (iterator.propertyPath == "m_Script") continue;
+
+                        try
+                        {
+                            result[iterator.name] = SerializedPropertyToJToken(iterator);
+                        }
+                        catch (Exception)
+                        {
+                            result[iterator.name] = "Unable to serialize";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                result["_error"] = $"Could not read via SerializedObject: {ex.Message}";
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Convert a single SerializedProperty's value to a JToken, based on its declared propertyType.
+        /// </summary>
+        private static JToken SerializedPropertyToJToken(SerializedProperty prop)
+        {
+            switch (prop.propertyType)
+            {
+                case SerializedPropertyType.Integer:
+                    return prop.intValue;
+                case SerializedPropertyType.Boolean:
+                    return prop.boolValue;
+                case SerializedPropertyType.Float:
+                    return prop.floatValue;
+                case SerializedPropertyType.String:
+                    return prop.stringValue;
+                case SerializedPropertyType.Color:
+                {
+                    Color c = prop.colorValue;
+                    return new JObject { ["r"] = c.r, ["g"] = c.g, ["b"] = c.b, ["a"] = c.a };
+                }
+                case SerializedPropertyType.Vector2:
+                {
+                    Vector2 v = prop.vector2Value;
+                    return new JObject { ["x"] = v.x, ["y"] = v.y };
+                }
+                case SerializedPropertyType.Vector3:
+                {
+                    Vector3 v = prop.vector3Value;
+                    return new JObject { ["x"] = v.x, ["y"] = v.y, ["z"] = v.z };
+                }
+                case SerializedPropertyType.Vector4:
+                {
+                    Vector4 v = prop.vector4Value;
+                    return new JObject { ["x"] = v.x, ["y"] = v.y, ["z"] = v.z, ["w"] = v.w };
+                }
+                case SerializedPropertyType.Quaternion:
+                {
+                    Quaternion q = prop.quaternionValue;
+                    return new JObject { ["x"] = q.x, ["y"] = q.y, ["z"] = q.z, ["w"] = q.w };
+                }
+                case SerializedPropertyType.Rect:
+                {
+                    Rect r = prop.rectValue;
+                    return new JObject { ["x"] = r.x, ["y"] = r.y, ["width"] = r.width, ["height"] = r.height };
+                }
+                case SerializedPropertyType.Bounds:
+                {
+                    Bounds b = prop.boundsValue;
+                    return new JObject
+                    {
+                        ["center"] = new JObject { ["x"] = b.center.x, ["y"] = b.center.y, ["z"] = b.center.z },
+                        ["size"] = new JObject { ["x"] = b.size.x, ["y"] = b.size.y, ["z"] = b.size.z }
+                    };
+                }
+                case SerializedPropertyType.Enum:
+                    return (prop.enumValueIndex >= 0 && prop.enumNames != null && prop.enumValueIndex < prop.enumNames.Length)
+                        ? prop.enumNames[prop.enumValueIndex]
+                        : (JToken)prop.enumValueIndex;
+                case SerializedPropertyType.ObjectReference:
+                    return prop.objectReferenceValue != null ? prop.objectReferenceValue.name : JValue.CreateNull();
+                case SerializedPropertyType.LayerMask:
+                    return prop.intValue;
+                case SerializedPropertyType.Vector2Int:
+                {
+                    Vector2Int v = prop.vector2IntValue;
+                    return new JObject { ["x"] = v.x, ["y"] = v.y };
+                }
+                case SerializedPropertyType.Vector3Int:
+                {
+                    Vector3Int v = prop.vector3IntValue;
+                    return new JObject { ["x"] = v.x, ["y"] = v.y, ["z"] = v.z };
+                }
+                case SerializedPropertyType.ArraySize:
+                    return prop.intValue;
+                case SerializedPropertyType.Generic:
+                    if (prop.isArray)
+                    {
+                        JArray array = new JArray();
+                        int count = Mathf.Min(prop.arraySize, MaxCollectionItems);
+                        for (int i = 0; i < count; i++)
+                        {
+                            array.Add(SerializedPropertyToJToken(prop.GetArrayElementAtIndex(i)));
+                        }
+                        if (prop.arraySize > count)
+                        {
+                            array.Add($"[... and {prop.arraySize - count} more items]");
+                        }
+                        return array;
+                    }
+                    return $"[{prop.type}]";
+                default:
+                    return $"[{prop.propertyType}]";
+            }
+        }
+
         /// <summary>
         /// Reference equality comparer for tracking visited objects (prevents circular reference infinite loops)
         /// </summary>

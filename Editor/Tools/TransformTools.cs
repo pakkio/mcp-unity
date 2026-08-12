@@ -437,49 +437,16 @@ namespace McpUnity.Tools
         }
 
         /// <summary>
-        /// Find a GameObject by instanceId or objectPath from parameters
+        /// Find a GameObject by instanceId or objectPath from parameters.
+        /// Delegates to the shared GameObjectResolver (see Editor/Utils/GameObjectResolver.cs).
         /// </summary>
         public static FindResult FindGameObject(JObject parameters)
         {
             int? instanceId = parameters["instanceId"]?.ToObject<int?>();
             string objectPath = parameters["objectPath"]?.ToObject<string>();
 
-            GameObject gameObject = null;
-            string identifierInfo = "";
-
-            if (instanceId.HasValue)
-            {
-                gameObject = UnityObjectId.ObjectFromId(instanceId.Value) as GameObject;
-                identifierInfo = $"instance ID {instanceId.Value}";
-            }
-            else if (!string.IsNullOrEmpty(objectPath))
-            {
-                gameObject = GameObject.Find(objectPath);
-                identifierInfo = $"path '{objectPath}'";
-            }
-            else
-            {
-                return new FindResult
-                {
-                    Error = McpUnitySocketHandler.CreateErrorResponse(
-                        "Either 'instanceId' or 'objectPath' must be provided",
-                        "validation_error"
-                    )
-                };
-            }
-
-            if (gameObject == null)
-            {
-                return new FindResult
-                {
-                    Error = McpUnitySocketHandler.CreateErrorResponse(
-                        $"GameObject not found with {identifierInfo}",
-                        "not_found_error"
-                    )
-                };
-            }
-
-            return new FindResult { GameObject = gameObject };
+            GameObjectResolver.Result result = GameObjectResolver.Find(instanceId, objectPath);
+            return new FindResult { GameObject = result.GameObject, Error = result.Error };
         }
 
         /// <summary>

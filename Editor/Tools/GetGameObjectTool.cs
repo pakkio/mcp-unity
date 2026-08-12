@@ -48,29 +48,12 @@ namespace McpUnity.Tools
                 );
             }
 
-            GameObject gameObject = null;
+            // Shared resolver: all loaded scenes, includes inactive objects (see
+            // Editor/Utils/GameObjectResolver.cs)
+            GameObjectResolver.Result findResult = GameObjectResolver.FindByIdOrName(idOrName);
+            if (findResult.Error != null) return findResult.Error;
 
-            // Try to parse as an instance ID first
-            if (int.TryParse(idOrName, out int instanceId))
-            {
-                // Unity Instance IDs are typically negative, but we'll accept any integer
-                UnityEngine.Object unityObject = UnityObjectId.ObjectFromId(instanceId);
-                gameObject = unityObject as GameObject;
-            }
-            else
-            {
-                // Otherwise, treat it as a name or hierarchical path
-                gameObject = GameObject.Find(idOrName);
-            }
-
-            // Check if the GameObject was found
-            if (gameObject == null)
-            {
-                return McpUnitySocketHandler.CreateErrorResponse(
-                    $"GameObject with '{idOrName}' reference not found. Make sure the GameObject exists and is loaded in the current scene(s).",
-                    "not_found_error"
-                );
-            }
+            GameObject gameObject = findResult.GameObject;
 
             int maxDepth = parameters["maxDepth"]?.ToObject<int?>() ?? GetGameObjectResource.DefaultMaxChildDepth;
             bool includeComponents = parameters["includeComponents"]?.ToObject<bool?>() ?? true;

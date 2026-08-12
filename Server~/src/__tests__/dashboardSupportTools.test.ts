@@ -52,7 +52,7 @@ describe('Dashboard Support Tools', () => {
           includeStackTrace: false
         }
       });
-      expect(result.data).toEqual({
+      expect(result.structuredContent).toEqual({
         logs,
         offset: 10,
         limit: 25,
@@ -80,7 +80,7 @@ describe('Dashboard Support Tools', () => {
         params: {}
       });
       expect(result.content[0].text).toContain('SampleScene');
-      expect(result.data).toEqual({ hierarchy });
+      expect(result.structuredContent).toEqual({ hierarchy });
     });
 
     it('throws a tool execution error when Unity fails', async () => {

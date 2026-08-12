@@ -13,7 +13,8 @@ namespace McpUnity.Tools
     public static class GameObjectToolUtils
     {
         /// <summary>
-        /// Find a GameObject by instance ID or hierarchy path
+        /// Find a GameObject by instance ID or hierarchy path.
+        /// Delegates to the shared GameObjectResolver (see Editor/Utils/GameObjectResolver.cs).
         /// </summary>
         /// <param name="instanceId">Optional instance ID</param>
         /// <param name="objectPath">Optional hierarchy path</param>
@@ -22,79 +23,10 @@ namespace McpUnity.Tools
         /// <returns>Error JObject if not found, null if successful</returns>
         public static JObject FindGameObject(int? instanceId, string objectPath, out GameObject gameObject, out string identifierInfo)
         {
-            gameObject = null;
-            identifierInfo = "";
-
-            if (instanceId.HasValue)
-            {
-                gameObject = UnityObjectId.ObjectFromId(instanceId.Value) as GameObject;
-                identifierInfo = $"instance ID {instanceId.Value}";
-            }
-            else if (!string.IsNullOrEmpty(objectPath))
-            {
-                gameObject = GameObject.Find(objectPath);
-                if (gameObject == null)
-                {
-                    // Try finding by traversing hierarchy
-                    gameObject = FindGameObjectByPath(objectPath);
-                }
-                identifierInfo = $"path '{objectPath}'";
-            }
-            else
-            {
-                return McpUnitySocketHandler.CreateErrorResponse(
-                    "Either 'instanceId' or 'objectPath' must be provided.",
-                    "validation_error"
-                );
-            }
-
-            if (gameObject == null)
-            {
-                return McpUnitySocketHandler.CreateErrorResponse(
-                    $"GameObject not found using {identifierInfo}.",
-                    "not_found_error"
-                );
-            }
-
-            return null; // Success
-        }
-
-        /// <summary>
-        /// Find a GameObject by its hierarchy path
-        /// </summary>
-        private static GameObject FindGameObjectByPath(string path)
-        {
-            if (string.IsNullOrEmpty(path)) return null;
-
-            path = path.TrimStart('/');
-            string[] parts = path.Split('/');
-
-            if (parts.Length == 0) return null;
-
-            // Find root object
-            GameObject current = null;
-            GameObject[] rootObjects = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
-
-            foreach (var root in rootObjects)
-            {
-                if (root.name == parts[0])
-                {
-                    current = root;
-                    break;
-                }
-            }
-
-            if (current == null) return null;
-
-            // Traverse children
-            for (int i = 1; i < parts.Length; i++)
-            {
-                Transform child = current.transform.Find(parts[i]);
-                if (child == null) return null;
-                current = child.gameObject;
-            }
-
-            return current;
+            GameObjectResolver.Result result = GameObjectResolver.Find(instanceId, objectPath);
+            gameObject = result.GameObject;
+            identifierInfo = instanceId.HasValue ? $"instance ID {instanceId.Value}" : $"path '{objectPath}'";
+            return result.Error;
         }
 
         /// <summary>

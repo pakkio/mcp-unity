@@ -114,7 +114,7 @@ async function toolHandler(
         ),
       },
     ],
-    data: {
+    structuredContent: {
       logs,
       offset,
       limit,

@@ -13,7 +13,7 @@ namespace McpUnity.Unity
     public class McpUnitySettings
     {
         // Constants
-        public const string ServerVersion = "1.2.0";
+        public const string ServerVersion = "1.4.0";
         public const string PackageName = "com.gamelovers.mcp-unity";
         public const int RequestTimeoutMinimum = 10;
         
@@ -42,6 +42,9 @@ namespace McpUnity.Unity
         
         [Tooltip("Allow connections from remote MCP bridges. When disabled, only localhost connections are allowed (default).")]
         public bool AllowRemoteConnections = false;
+
+        [Tooltip("Shared secret a connecting client must present (via the X-Mcp-Auth-Token header) once AllowRemoteConnections is enabled. Binding to 0.0.0.0 with this left empty means any host on the network can drive the Editor - including destructive tools (execute_menu_item, import_local_file) - with no authentication at all. Ignored while AllowRemoteConnections is off, since localhost-only already limits access to the local machine.")]
+        public string AuthToken = string.Empty;
 
         /// <summary>
         /// Singleton instance of settings

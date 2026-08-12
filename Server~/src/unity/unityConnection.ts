@@ -41,6 +41,9 @@ export interface UnityConnectionConfig {
   requestTimeout: number;
   connectTimeout?: number;
   clientName?: string;
+  /** Shared secret sent as the X-Mcp-Auth-Token header, required by Unity only when
+   *  AllowRemoteConnections + a configured AuthToken are both set on the Unity side. */
+  authToken?: string;
 
   // Reconnection settings
   minReconnectDelay?: number;      // Default: 1000ms
@@ -213,11 +216,13 @@ export class UnityConnection extends EventEmitter {
       this.logger.debug(`Connecting to ${wsUrl}...`);
 
       // Create connection options with headers for client identification
-      const options: WebSocket.ClientOptions = {
-        headers: {
-          'X-Client-Name': this.config.clientName || ''
-        }
+      const headers: Record<string, string> = {
+        'X-Client-Name': this.config.clientName || ''
       };
+      if (this.config.authToken) {
+        headers['X-Mcp-Auth-Token'] = this.config.authToken;
+      }
+      const options: WebSocket.ClientOptions = { headers };
 
       // Clean up existing socket first
       this.closeWebSocket('Preparing new connection');

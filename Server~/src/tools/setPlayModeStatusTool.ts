@@ -4,6 +4,7 @@ import { McpUnityError, ErrorType } from '../utils/errors.js';
 import * as z from 'zod';
 import { Logger } from '../utils/logger.js';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { getToolTimeout } from '../utils/timeouts.js';
 
 const toolName = 'set_play_mode_status';
 const toolDescription = "Controls Unity play mode. Actions: 'play' (start or unpause), 'pause' (toggle pause), 'stop' (exit play mode), 'step' (advance one frame while paused).";
@@ -39,7 +40,7 @@ async function toolHandler(mcpUnity: McpUnity, params: any): Promise<CallToolRes
   const response = await mcpUnity.sendRequest({
     method: toolName,
     params: validatedParams
-  });
+  }, { timeout: getToolTimeout(toolName) });
 
   if (!response.success) {
     throw new McpUnityError(
@@ -59,7 +60,7 @@ async function toolHandler(mcpUnity: McpUnity, params: any): Promise<CallToolRes
         text: `Play mode action '${validatedParams.action}' executed successfully. Current state: ${statusText}`
       }
     ],
-    data: {
+    structuredContent: {
       action: validatedParams.action,
       isPlaying: response.isPlaying,
       isPaused: response.isPaused

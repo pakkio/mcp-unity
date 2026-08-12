@@ -55,7 +55,7 @@ describe('Play Mode Tools', () => {
         params: {}
       });
       expect(result.content[0].text).toBe('Play mode');
-      expect(result.data).toEqual({ isPlaying: true, isPaused: false });
+      expect(result.structuredContent).toEqual({ isPlaying: true, isPaused: false });
     });
 
     it('throws a tool execution error when Unity reports failure', async () => {
@@ -102,9 +102,9 @@ describe('Play Mode Tools', () => {
       expect(mockSendRequest).toHaveBeenCalledWith({
         method: 'set_play_mode_status',
         params: { action: 'stop' }
-      });
+      }, { timeout: 30000 });
       expect(result.content[0].text).toContain("Play mode action 'stop'");
-      expect(result.data).toEqual({
+      expect(result.structuredContent).toEqual({
         action: 'stop',
         isPlaying: false,
         isPaused: false

@@ -15,6 +15,7 @@ interface McpUnitySettingsFile {
   Port?: unknown;
   Host?: unknown;
   RequestTimeoutSeconds?: unknown;
+  AuthToken?: unknown;
 }
 
 interface SettingsFileResult {
@@ -32,6 +33,7 @@ export interface ResolvedUnityConnectionConfig {
   host: string;
   port: number;
   requestTimeout: number;
+  authToken?: string;
   settingsPath?: string;
 }
 
@@ -92,10 +94,21 @@ export async function resolveUnityConnectionConfig(
   logger.info(`Using host: ${host.value} for Unity WebSocket connection (source: ${host.source})`);
   logger.info(`Using request timeout: ${timeoutSeconds.value} seconds (source: ${timeoutSeconds.source})`);
 
+  const authToken = resolveOptionalStringSetting({
+    environment,
+    environmentName: 'UNITY_AUTH_TOKEN',
+    configurationValue: settings.AuthToken,
+    logger
+  });
+  if (authToken) {
+    logger.info('Using an auth token for the Unity WebSocket connection.');
+  }
+
   return {
     host: host.value,
     port: port.value,
     requestTimeout: timeoutSeconds.value * 1000,
+    authToken,
     settingsPath: settingsFile?.path
   };
 }
@@ -252,6 +265,26 @@ function resolveStringSetting(options: StringSettingOptions): { value: string; s
   }
 
   return { value: options.defaultValue, source: 'default' };
+}
+
+interface OptionalStringSettingOptions {
+  environment: NodeJS.ProcessEnv;
+  environmentName: string;
+  configurationValue: unknown;
+  logger: LoggerLike;
+}
+
+/**
+ * Like resolveStringSetting, but for settings that are legitimately absent (no default) rather
+ * than always having a fallback value - e.g. an auth token that most setups won't configure.
+ */
+function resolveOptionalStringSetting(options: OptionalStringSettingOptions): string | undefined {
+  const environmentValue = normalizeString(options.environment[options.environmentName]);
+  if (environmentValue) {
+    return environmentValue;
+  }
+
+  return normalizeString(options.configurationValue);
 }
 
 function parseInteger(value: unknown): number | undefined {

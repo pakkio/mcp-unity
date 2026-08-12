@@ -3,6 +3,7 @@ import { McpUnity } from '../unity/mcpUnity.js';
 import { McpUnityError, ErrorType } from '../utils/errors.js';
 import * as z from 'zod';
 import { Logger } from '../utils/logger.js';
+import { getToolTimeout } from '../utils/timeouts.js';
 
 // Constants for the tool
 const toolName = 'create_prefab';
@@ -62,8 +63,8 @@ async function toolHandler(mcpUnity: McpUnity, params: any) {
   const response = await mcpUnity.sendRequest({
     method: toolName,
     params
-  });
-  
+  }, { timeout: getToolTimeout(toolName) });
+
   if (!response.success) {
     throw new McpUnityError(
       ErrorType.TOOL_EXECUTION,
@@ -77,7 +78,7 @@ async function toolHandler(mcpUnity: McpUnity, params: any) {
       text: response.message || `Successfully created prefab`
     }],
     // Include the prefab path in the result for programmatic access
-    data: {
+    structuredContent: {
       prefabPath: response.prefabPath
     }
   };

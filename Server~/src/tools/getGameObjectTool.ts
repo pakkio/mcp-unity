@@ -104,6 +104,8 @@ async function toolHandler(
     );
   }
 
+  const { success, ...data } = response;
+
   return {
     content: [
       {
@@ -111,6 +113,7 @@ async function toolHandler(
         text: JSON.stringify(response, null, 2),
       },
     ],
+    structuredContent: data,
   };
 }
 

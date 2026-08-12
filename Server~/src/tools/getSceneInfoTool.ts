@@ -64,7 +64,7 @@ async function toolHandler(mcpUnity: McpUnity, params: any) {
       type: response.type as "text",
       text: text
     }],
-    data: {
+    structuredContent: {
       activeScene: response.activeScene,
       loadedSceneCount: response.loadedSceneCount,
       loadedScenes: response.loadedScenes

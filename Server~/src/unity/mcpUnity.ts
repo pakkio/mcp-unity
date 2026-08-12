@@ -5,11 +5,14 @@ import { McpUnityError, ErrorType } from '../utils/errors.js';
 import { UnityConnection, ConnectionState, ConnectionStateChange, UnityConnectionConfig } from './unityConnection.js';
 import { CommandQueue, CommandQueueConfig, CommandQueueStats, QueuedCommand } from './commandQueue.js';
 import { resolveUnityConnectionConfig } from './unityConnectionConfig.js';
+import { isReplayableMethod } from './replayableMethods.js';
 
 interface PendingRequest {
   resolve: (value: any) => void;
   reject: (reason: any) => void;
   timeout: NodeJS.Timeout;
+  /** The original message, kept so a read-only request can be re-sent after a reconnect. */
+  request: UnityRequest;
 }
 
 interface UnityRequest {
@@ -63,6 +66,7 @@ export class McpUnity {
   private port: number = 8090;
   private host: string = 'localhost';
   private requestTimeout = 10000;
+  private authToken?: string;
 
   private connection: UnityConnection | null = null;
   private pendingRequests: Map<string, PendingRequest> = new Map<string, PendingRequest>();
@@ -77,6 +81,11 @@ export class McpUnity {
 
   // Flag to track if we're currently replaying queued commands
   private isReplayingQueue: boolean = false;
+
+  // In-flight requests whose socket died mid-request and which are safe to re-send once
+  // reconnected. Their entries stay in pendingRequests (so the original promise and timeout
+  // remain armed); only the raw message is re-sent.
+  private pendingReplay: UnityRequest[] = [];
 
   constructor(logger: Logger, config?: McpUnityConfig) {
     this.logger = logger;
@@ -130,6 +139,7 @@ export class McpUnity {
         port: this.port,
         requestTimeout: this.requestTimeout,
         clientName: this.clientName,
+        authToken: this.authToken,
         // Use defaults for reconnection and heartbeat from UnityConnection
       };
 
@@ -145,9 +155,16 @@ export class McpUnity {
       });
 
       this.connection.on('error', (error: McpUnityError) => {
+        // Log only - do NOT reject pending requests here. This fires on every raw WebSocket
+        // error, including a transient reset that immediately precedes a clean reconnect (the
+        // common case when Unity closes the socket for a domain reload / Play mode transition).
+        // Rejecting eagerly turned an in-flight request that Unity would have answered within
+        // milliseconds into a hard client-visible failure ("Connection failed") even though the
+        // underlying Unity-side operation succeeded. Pending requests are already correctly
+        // rejected in handleStateChange() once the connection reaches the terminal Disconnected
+        // state (manual stop or max reconnection attempts) - short of that, let them ride out
+        // either a matching response or their own per-request timeout.
         this.logger.error(`Connection error: ${error.message}`);
-        // Reject pending requests on connection error
-        this.rejectAllPendingRequests(error);
       });
 
       this.logger.info('Attempting to connect to Unity WebSocket...');
@@ -175,6 +192,7 @@ export class McpUnity {
     this.port = config.port;
     this.host = config.host;
     this.requestTimeout = config.requestTimeout;
+    this.authToken = config.authToken;
   }
 
   /**
@@ -192,11 +210,21 @@ export class McpUnity {
       }
     }
 
+    // Leaving Connected means the socket died under any in-flight requests. They will never be
+    // answered on the new socket unless re-sent, so triage them now rather than letting each sit
+    // until its own timeout (up to 300s for run_tests).
+    if (change.previousState === ConnectionState.Connected &&
+        (change.currentState === ConnectionState.Reconnecting ||
+         change.currentState === ConnectionState.Connecting)) {
+      this.triageInFlightRequests(change.reason);
+    }
+
     // Handle specific state transitions
     if (change.currentState === ConnectionState.Connected &&
         (change.previousState === ConnectionState.Reconnecting ||
          change.previousState === ConnectionState.Connecting)) {
-      // Connection restored - replay queued commands
+      // Connection restored - re-send surviving in-flight reads, then replay queued commands
+      this.replayInFlightRequests();
       this.replayQueuedCommands();
     } else if (change.currentState === ConnectionState.Disconnected) {
       // Clear the queue when we're fully disconnected (not reconnecting)
@@ -208,6 +236,73 @@ export class McpUnity {
       this.rejectAllPendingRequests(
         new McpUnityError(ErrorType.CONNECTION, change.reason || 'Connection lost')
       );
+    }
+  }
+
+  /**
+   * Triage requests that were in flight when the socket dropped (Unity domain reload, Play mode
+   * transition, editor restart).
+   *
+   * Read-only methods are parked for replay on reconnect - their promise and timeout stay armed,
+   * so from the caller's perspective the reload is invisible as long as the reconnect beats the
+   * timeout. Everything else is rejected immediately: Unity does not deduplicate request ids, so a
+   * mutation that Unity may already have executed must never be silently re-sent, and leaving it
+   * pending would just stall the caller until an unrelated timeout with a less useful error.
+   */
+  private triageInFlightRequests(reason?: string): void {
+    if (this.pendingRequests.size === 0) return;
+
+    const suffix = reason ? ` (${reason})` : '';
+
+    for (const [id, pending] of Array.from(this.pendingRequests.entries())) {
+      const method = pending.request.method;
+
+      if (isReplayableMethod(method)) {
+        this.pendingReplay.push(pending.request);
+        this.logger.info(`Connection dropped with read-only '${method}' in flight; will re-send on reconnect`);
+        continue;
+      }
+
+      clearTimeout(pending.timeout);
+      this.pendingRequests.delete(id);
+      pending.reject(new McpUnityError(
+        ErrorType.CONNECTION,
+        `Connection to Unity dropped while '${method}' was in flight${suffix}. ` +
+        'The operation may or may not have been applied - it is not retried automatically because ' +
+        'Unity does not deduplicate requests and re-sending could apply it twice. ' +
+        'Check the current state before retrying.'
+      ));
+    }
+  }
+
+  /**
+   * Re-send in-flight read-only requests that survived a reconnect.
+   */
+  private replayInFlightRequests(): void {
+    if (this.pendingReplay.length === 0) return;
+
+    const toReplay = this.pendingReplay;
+    this.pendingReplay = [];
+
+    this.logger.info(`Re-sending ${toReplay.length} in-flight request(s) after reconnect`);
+
+    for (const request of toReplay) {
+      const id = request.id as string;
+      const pending = this.pendingRequests.get(id);
+
+      // Already resolved or timed out while we were disconnected - nothing to do.
+      if (!pending) continue;
+
+      try {
+        this.connection!.send(JSON.stringify(request));
+      } catch (err) {
+        clearTimeout(pending.timeout);
+        this.pendingRequests.delete(id);
+        pending.reject(new McpUnityError(
+          ErrorType.CONNECTION,
+          `Failed to re-send '${request.method}' after reconnect: ${err instanceof Error ? err.message : String(err)}`
+        ));
+      }
     }
   }
 
@@ -285,6 +380,10 @@ export class McpUnity {
    * Reject all pending requests with an error
    */
   private rejectAllPendingRequests(error: McpUnityError): void {
+    // Anything parked for replay is being rejected here too, so drop the parked copies rather
+    // than letting a later reconnect re-send a request whose promise is already settled.
+    this.pendingReplay = [];
+
     for (const [id, request] of this.pendingRequests.entries()) {
       clearTimeout(request.timeout);
       request.reject(error);
@@ -433,7 +532,8 @@ export class McpUnity {
       this.pendingRequests.set(requestId, {
         resolve,
         reject,
-        timeout
+        timeout,
+        request
       });
 
       try {

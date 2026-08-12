@@ -3,6 +3,7 @@ import { McpUnity } from '../unity/mcpUnity.js';
 import { McpUnityError, ErrorType } from '../utils/errors.js';
 import * as z from 'zod';
 import { Logger } from '../utils/logger.js';
+import { getToolTimeout } from '../utils/timeouts.js';
 
 const toolName = 'export_package';
 const toolDescription = 'Exports assets or scenes to a .unitypackage file with optional dependencies';
@@ -47,7 +48,7 @@ async function toolHandler(mcpUnity: McpUnity, params: any) {
   const response = await mcpUnity.sendRequest({
     method: toolName,
     params
-  });
+  }, { timeout: getToolTimeout(toolName) });
 
   if (!response.success) {
     throw new McpUnityError(
@@ -61,7 +62,7 @@ async function toolHandler(mcpUnity: McpUnity, params: any) {
       type: response.type || 'text',
       text: response.message || 'Successfully exported package'
     }],
-    data: {
+    structuredContent: {
       exportPath: response.exportPath,
       fullPath: response.fullPath,
       assetCount: response.assetCount

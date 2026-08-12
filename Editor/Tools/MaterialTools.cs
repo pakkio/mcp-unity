@@ -172,64 +172,12 @@ namespace McpUnity.Tools
         }
 
         /// <summary>
-        /// Find a GameObject by instance ID or path
+        /// Find a GameObject by instance ID or path.
+        /// Delegates to the shared GameObjectResolver (see Editor/Utils/GameObjectResolver.cs).
         /// </summary>
         public static GameObject FindGameObject(int? instanceId, string objectPath)
         {
-            GameObject gameObject = null;
-
-            if (instanceId.HasValue)
-            {
-                gameObject = UnityObjectId.ObjectFromId(instanceId.Value) as GameObject;
-            }
-            else if (!string.IsNullOrEmpty(objectPath))
-            {
-                gameObject = GameObject.Find(objectPath);
-
-                if (gameObject == null)
-                {
-                    // Try to find using hierarchy path
-                    gameObject = FindGameObjectByPath(objectPath);
-                }
-            }
-
-            return gameObject;
-        }
-
-        /// <summary>
-        /// Find a GameObject by its hierarchy path
-        /// </summary>
-        private static GameObject FindGameObjectByPath(string path)
-        {
-            string[] pathParts = path.Split('/');
-            GameObject[] rootGameObjects = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
-
-            if (pathParts.Length == 0)
-            {
-                return null;
-            }
-
-            foreach (GameObject rootObj in rootGameObjects)
-            {
-                if (rootObj.name == pathParts[0])
-                {
-                    GameObject current = rootObj;
-
-                    for (int i = 1; i < pathParts.Length; i++)
-                    {
-                        Transform child = current.transform.Find(pathParts[i]);
-                        if (child == null)
-                        {
-                            return null;
-                        }
-                        current = child.gameObject;
-                    }
-
-                    return current;
-                }
-            }
-
-            return null;
+            return GameObjectResolver.Find(instanceId, objectPath).GameObject;
         }
     }
 

@@ -166,10 +166,20 @@ async function batchExecuteHandler(
     );
   }
 
+  // Successful operations carry their own result payloads (bounds, gameobject data, etc.)
+  // that the text summary above never surfaces - include them in full so callers of
+  // batch_execute (the recommended path for >2-3 related calls) don't lose read data.
+  resultText += '\n\nResults:\n' + JSON.stringify(response.results, null, 2);
+
   return {
     content: [{
       type: 'text',
       text: resultText
-    }]
+    }],
+    structuredContent: {
+      success: response.success,
+      summary: response.summary,
+      results: response.results
+    }
   };
 }

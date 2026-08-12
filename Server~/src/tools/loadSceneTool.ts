@@ -60,7 +60,7 @@ async function toolHandler(mcpUnity: McpUnity, params: any) {
       type: response.type,
       text: response.message || 'Successfully loaded scene'
     }],
-    data: {
+    structuredContent: {
       scenePath: response.scenePath,
       additive: response.additive
     }

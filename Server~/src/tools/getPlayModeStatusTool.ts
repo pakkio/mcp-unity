@@ -55,7 +55,7 @@ async function toolHandler(mcpUnity: McpUnity, params: any): Promise<CallToolRes
         text: statusText
       }
     ],
-    data: {
+    structuredContent: {
       isPlaying: response.isPlaying,
       isPaused: response.isPaused
     }
