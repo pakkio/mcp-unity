@@ -18,6 +18,18 @@ namespace McpUnity.Services
     /// </summary>
     public class TestRunnerService : ITestRunnerService, ICallbacks
     {
+        /// <summary>
+        /// Ceiling for an actual test run, matching the Node bridge's TOOL_TIMEOUTS_MS.run_tests
+        /// override (Server~/src/utils/timeouts.ts). A full test suite routinely exceeds
+        /// McpUnitySettings.RequestTimeoutSeconds (10s minimum) - using that setting here meant
+        /// this wait gave up long before Node did, so the caller received a misleading
+        /// "timed out" error while Unity kept running the suite to completion unattended in the
+        /// background. Any GameObjects/scenes a test creates or tears down as part of its own
+        /// fixtures then mutate out from under whatever the caller does next, believing (from the
+        /// error) that nothing was still in flight.
+        /// </summary>
+        private const int TestRunTimeoutSeconds = 300;
+
         private readonly TestRunnerApi _testRunnerApi;
         private TaskCompletionSource<JObject> _tcs;
         private bool _returnOnlyFailures;
@@ -86,8 +98,7 @@ namespace McpUnity.Services
 
             _testRunnerApi.Execute(new ExecutionSettings(filter));
 
-            return await WaitForCompletionAsync(
-                McpUnitySettings.Instance.RequestTimeoutSeconds);
+            return await WaitForCompletionAsync(TestRunTimeoutSeconds);
         }
         
         /// <summary>

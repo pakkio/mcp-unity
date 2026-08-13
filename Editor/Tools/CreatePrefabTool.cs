@@ -61,12 +61,15 @@ namespace McpUnity.Tools
                 }
             }
             
-            // For safety, we'll create a unique name if prefab already exists
+            // For safety, we'll create a unique name if prefab already exists.
+            // Must be Assets/-relative: SaveAsPrefabAsset (and AssetDatabase generally) treats
+            // any other path as invalid, so a bare "{prefabName}.prefab" here previously wrote
+            // nowhere the AssetDatabase would recognize and silently returned success=false.
             int counter = 1;
-            string prefabPath = $"{prefabName}.prefab";
+            string prefabPath = $"Assets/{prefabName}.prefab";
             while (AssetDatabase.AssetPathToGUID(prefabPath) != "")
             {
-                prefabPath = $"{prefabName}_{counter}.prefab";
+                prefabPath = $"Assets/{prefabName}_{counter}.prefab";
                 counter++;
             }
             
