@@ -134,7 +134,7 @@ async function renameAssetHandler(mcpUnity: McpUnity, params: any): Promise<Call
       type: 'text' as const,
       text: response.message || 'Successfully renamed asset'
     }],
-    data: {
+    structuredContent: {
       newName: response.newName,
       newPath: response.newPath
     }
@@ -163,7 +163,7 @@ async function createFolderHandler(mcpUnity: McpUnity, params: any): Promise<Cal
       type: 'text' as const,
       text: response.message || 'Successfully created folder'
     }],
-    data: {
+    structuredContent: {
       guid: response.guid,
       folderPath: response.folderPath
     }

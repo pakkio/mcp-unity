@@ -99,7 +99,7 @@ describe('Asset Management Tools', () => {
         params: { assetPath: 'Assets/old.png', newName: 'new' }
       });
       expect(result.content[0].text).toBe("Successfully renamed asset at 'Assets/old.png' to 'new'");
-      expect(result.data).toEqual({
+      expect(result.structuredContent).toEqual({
         newName: 'new',
         newPath: 'Assets/new.png'
       });
@@ -150,7 +150,7 @@ describe('Asset Management Tools', () => {
         params: { parentFolder: 'Assets', newFolderName: 'Sub' }
       });
       expect(result.content[0].text).toBe("Successfully created folder 'Sub' in 'Assets'");
-      expect(result.data).toEqual({
+      expect(result.structuredContent).toEqual({
         guid: 'mock-guid-123',
         folderPath: 'Assets/Sub'
       });

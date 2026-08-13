@@ -6,6 +6,13 @@ import { McpUnityError, ErrorType } from '../utils/errors.js';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 const toolName = 'batch_execute';
+
+/**
+ * Cap on how much of the results payload is repeated inside the text block. The full payload is
+ * always available in structuredContent; this only bounds the copy kept for clients that render
+ * `content` alone.
+ */
+const MAX_INLINE_RESULTS_CHARS = 100000;
 const toolDescription = `Executes multiple tool operations in a single batch request.
 Reduces network round-trips and enables atomic operations with rollback support.
 Performance improvement: 10-100x for repetitive operations.`;
@@ -166,10 +173,17 @@ async function batchExecuteHandler(
     );
   }
 
-  // Successful operations carry their own result payloads (bounds, gameobject data, etc.)
-  // that the text summary above never surfaces - include them in full so callers of
-  // batch_execute (the recommended path for >2-3 related calls) don't lose read data.
-  resultText += '\n\nResults:\n' + JSON.stringify(response.results, null, 2);
+  // Successful operations carry their own result payloads (bounds, gameobject data, etc.) that
+  // the text summary above never surfaces. Repeat them in the text block so clients that only
+  // render `content` don't lose read data - but only when there is something to show, and
+  // bounded, because a batch containing capture_screenshot or a large hierarchy read would
+  // otherwise ship megabytes twice (once here, once in structuredContent below).
+  if (response.results && response.results.length > 0) {
+    const serialized = JSON.stringify(response.results, null, 2);
+    resultText += '\n\nResults:\n' + (serialized.length > MAX_INLINE_RESULTS_CHARS
+      ? `${serialized.slice(0, MAX_INLINE_RESULTS_CHARS)}\n... [truncated, ${serialized.length - MAX_INLINE_RESULTS_CHARS} more chars - see structuredContent for the full payload]`
+      : serialized);
+  }
 
   return {
     content: [{

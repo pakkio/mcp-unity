@@ -53,17 +53,25 @@ async function toolHandler(mcpUnity: McpUnity, params: any): Promise<CallToolRes
     ? (response.isPaused ? 'Playing (paused)' : 'Playing')
     : 'Edit mode';
 
+  // 'play'/'stop' are applied a tick after Unity answers, so isPlaying/isPaused describe the
+  // requested target, not an observed state. Don't report it as an accomplished fact.
+  const transitionPending = response.transitionPending === true;
+  const text = transitionPending
+    ? `Play mode action '${validatedParams.action}' accepted. Target state: ${statusText} (applied on the next editor tick; call 'get_play_mode_status' to confirm)`
+    : `Play mode action '${validatedParams.action}' executed successfully. Current state: ${statusText}`;
+
   return {
     content: [
       {
         type: 'text',
-        text: `Play mode action '${validatedParams.action}' executed successfully. Current state: ${statusText}`
+        text
       }
     ],
     structuredContent: {
       action: validatedParams.action,
       isPlaying: response.isPlaying,
-      isPaused: response.isPaused
+      isPaused: response.isPaused,
+      transitionPending
     },
     isError: false
   };

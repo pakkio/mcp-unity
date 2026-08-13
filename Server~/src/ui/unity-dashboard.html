@@ -524,8 +524,10 @@
       function extractToolData(callToolResult) {
         if (!callToolResult) return null;
 
-        // Some MCP App hosts strip non-standard fields (like `data`) from tool results.
-        // Prefer it when present, but fall back to parsing `content[].text`.
+        // `structuredContent` is the standard MCP field and what the tools this dashboard polls
+        // now emit; `data` is the legacy non-standard field some tools still use. Some MCP App
+        // hosts strip either one, so fall back to parsing `content[].text` when neither survives.
+        if (callToolResult.structuredContent) return callToolResult.structuredContent;
         if (callToolResult.data) return callToolResult.data;
         const blocks = callToolResult.content || [];
         for (const block of blocks) {

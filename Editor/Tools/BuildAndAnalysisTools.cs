@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.Compilation;
 using UnityEngine;
@@ -213,7 +214,7 @@ namespace McpUnity.Tools
                     if (scriptType == null)
                     {
                         // Match case-insensitively across assembly types
-                        foreach (var t in assembly.GetTypes())
+                        foreach (var t in GetLoadableTypes(assembly))
                         {
                             if (t.Name.Equals(scriptName, StringComparison.OrdinalIgnoreCase))
                             {
@@ -250,7 +251,9 @@ namespace McpUnity.Tools
                         {
                             ["gameObjectName"] = mb.gameObject.name,
                             ["gameObjectPath"] = GetGameObjectPath(mb.gameObject),
-                            ["instanceId"] = mb.gameObject.GetInstanceID(),
+                            // Public ID scheme shared with every other tool - a raw GetInstanceID()
+                            // is not resolvable by GameObjectResolver under MCP_UNITY_ENTITY_ID_API.
+                            ["instanceId"] = UnityObjectId.GetObjectId(mb.gameObject),
                             ["enabled"] = mb.enabled
                         });
                     }
@@ -282,6 +285,29 @@ namespace McpUnity.Tools
                 path = obj.name + "/" + path;
             }
             return path;
+        }
+
+        /// <summary>
+        /// Assembly.GetTypes() throws ReflectionTypeLoadException whenever any type in the
+        /// assembly references something that can't be resolved - routine in a Unity domain with
+        /// optional or platform-conditional packages. The exception still carries the types that
+        /// did load, so use those rather than letting one bad assembly fail the whole search.
+        /// </summary>
+        private static IEnumerable<Type> GetLoadableTypes(System.Reflection.Assembly assembly)
+        {
+            try
+            {
+                return assembly.GetTypes();
+            }
+            catch (System.Reflection.ReflectionTypeLoadException ex)
+            {
+                return ex.Types.Where(t => t != null);
+            }
+            catch (Exception)
+            {
+                // Some assemblies (e.g. reflection-only or dynamic) can fail in other ways.
+                return Array.Empty<Type>();
+            }
         }
     }
 }

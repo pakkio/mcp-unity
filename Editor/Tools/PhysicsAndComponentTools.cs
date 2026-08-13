@@ -57,6 +57,12 @@ namespace McpUnity.Tools
 
                 direction.Normalize();
 
+                // Editor transform edits (move_gameobject, set_transform, etc.) don't automatically
+                // push updated colliders into the physics world until the next physics step - which
+                // in Edit mode may never come. Without this, a raycast run immediately after moving
+                // an object can hit its stale pre-move position.
+                Physics.SyncTransforms();
+
                 bool hit = Physics.Raycast(origin, direction, out RaycastHit hitInfo, maxDistance, layerMask);
 
                 if (hit)
@@ -80,7 +86,9 @@ namespace McpUnity.Tools
                         },
                         ["gameObjectName"] = hitInfo.collider.gameObject.name,
                         ["gameObjectPath"] = GetGameObjectPath(hitInfo.collider.gameObject),
-                        ["instanceId"] = hitInfo.collider.gameObject.GetInstanceID()
+                        // Public ID scheme shared with every other tool - a raw GetInstanceID()
+                        // is not resolvable by GameObjectResolver under MCP_UNITY_ENTITY_ID_API.
+                        ["instanceId"] = UnityObjectId.GetObjectId(hitInfo.collider.gameObject)
                     };
                 }
                 else
@@ -139,24 +147,14 @@ namespace McpUnity.Tools
 
             try
             {
-                GameObject sourceObj = ResolveGameObject(parameters, "sourceInstanceId", "sourceObjectPath");
-                GameObject targetObj = ResolveGameObject(parameters, "targetInstanceId", "targetObjectPath");
+                GameObjectResolver.Result sourceResult = ResolveGameObject(parameters, "Source", "sourceInstanceId", "sourceObjectPath");
+                if (sourceResult.Error != null) return sourceResult.Error;
 
-                if (sourceObj == null)
-                {
-                    return McpUnitySocketHandler.CreateErrorResponse(
-                        "Source GameObject not found. Provide a valid 'sourceInstanceId' or 'sourceObjectPath'.",
-                        "source_not_found"
-                    );
-                }
+                GameObjectResolver.Result targetResult = ResolveGameObject(parameters, "Target", "targetInstanceId", "targetObjectPath");
+                if (targetResult.Error != null) return targetResult.Error;
 
-                if (targetObj == null)
-                {
-                    return McpUnitySocketHandler.CreateErrorResponse(
-                        "Target GameObject not found. Provide a valid 'targetInstanceId' or 'targetObjectPath'.",
-                        "target_not_found"
-                    );
-                }
+                GameObject sourceObj = sourceResult.GameObject;
+                GameObject targetObj = targetResult.GameObject;
 
                 Component sourceComp = sourceObj.GetComponent(componentType);
                 if (sourceComp == null)
@@ -234,21 +232,28 @@ namespace McpUnity.Tools
             }
         }
 
-        private GameObject ResolveGameObject(JObject parameters, string instanceIdKey, string pathKey)
+        /// <summary>
+        /// Resolve one end of the copy via the shared resolver, so instance IDs use the same
+        /// public-ID scheme every other tool hands out (synthetic under MCP_UNITY_ENTITY_ID_API,
+        /// raw instance IDs otherwise) and paths reach inactive objects in every loaded scene.
+        /// </summary>
+        private GameObjectResolver.Result ResolveGameObject(JObject parameters, string role, string instanceIdKey, string pathKey)
         {
             int? instanceId = parameters[instanceIdKey]?.ToObject<int?>();
-            if (instanceId.HasValue)
-            {
-                return EditorUtility.InstanceIDToObject(instanceId.Value) as GameObject;
-            }
-
             string path = parameters[pathKey]?.ToObject<string>();
-            if (!string.IsNullOrEmpty(path))
+
+            if (!instanceId.HasValue && string.IsNullOrEmpty(path))
             {
-                return GameObject.Find(path);
+                return new GameObjectResolver.Result
+                {
+                    Error = McpUnitySocketHandler.CreateErrorResponse(
+                        $"{role} GameObject not specified. Provide a valid '{instanceIdKey}' or '{pathKey}'.",
+                        "validation_error"
+                    )
+                };
             }
 
-            return null;
+            return GameObjectResolver.Find(instanceId, path);
         }
     }
 }

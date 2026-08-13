@@ -23,7 +23,12 @@ namespace McpUnity.Tools
         /// </summary>
         private static readonly HashSet<string> DeniedMenuPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
+            // Quitting the Editor: the path differs per platform, so block every spelling.
+            // Windows/Linux use File/Exit; macOS puts Quit under the Unity application menu.
+            "File/Exit",
             "File/Quit",
+            "Unity/Quit",
+            "Unity/Quit Unity",
             "Edit/Preferences...",
             "Edit/Project Settings...",
             "Edit/Clear All PlayerPrefs",

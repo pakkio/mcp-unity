@@ -263,7 +263,13 @@ namespace McpUnity.Tools
             // extent AssetPathToGUID) are expensive per-asset calls, and the default query is ""
             // which matches every asset in the project - resolving metadata for every match before
             // truncating made the common call orders of magnitude slower than it needs to be.
-            const int scanCap = 10000;
+            //
+            // Every path is scanned, deliberately: capping the scan would mean ranking only ever
+            // sees a prefix of GetAllAssetPaths() order, so an exact-name match late in that order
+            // would be silently dropped despite the tool promising relevance ordering. The scan
+            // itself is only string comparisons, and GetAllAssetPaths() has already materialized
+            // every path in memory by this point, so retaining a struct per match is the same
+            // order of magnitude as the array we are iterating.
             var candidates = new List<Candidate>();
 
             foreach (string path in AssetDatabase.GetAllAssetPaths())
@@ -279,8 +285,6 @@ namespace McpUnity.Tools
                     FileName = fileNameLower,
                     Rank = RelevanceRank(fileNameLower, query)
                 });
-
-                if (candidates.Count >= scanCap) break;
             }
 
             candidates.Sort((a, b) =>
@@ -649,7 +653,8 @@ namespace McpUnity.Tools
             Vector3 cameraPos = bounds.center - direction * distance;
 
             sceneView.LookAtDirect(bounds.center, Quaternion.LookRotation(direction, Vector3.up), distance);
-            sceneView.RepaintAll();
+            // RepaintAll is static - repaints every SceneView, which is what we want here.
+            SceneView.RepaintAll();
 
             McpLogger.LogInfo($"{Name}: framed camera on '{go.name}' at distance {distance:F2}");
             return new JObject

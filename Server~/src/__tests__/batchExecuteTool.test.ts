@@ -149,6 +149,44 @@ describe('Batch Execute Tool', () => {
       expect(result.content[0].text).toContain('failed');
     });
 
+    it('omits the Results block entirely when Unity returns no results array', async () => {
+      mockSendRequest.mockResolvedValue({
+        success: true,
+        type: 'text',
+        message: 'Batch execution completed',
+        summary: { total: 0, succeeded: 0, failed: 0, executed: 0 }
+      });
+
+      const result = await toolHandler({ operations: [{ tool: 'tool1', params: {} }] });
+
+      // Serializing a missing results array used to emit the literal string "undefined".
+      expect(result.content[0].text).not.toContain('undefined');
+      expect(result.content[0].text).not.toContain('Results:');
+    });
+
+    it('truncates an oversized results payload in the text block but keeps it whole in structuredContent', async () => {
+      const bulky = Array.from({ length: 200 }, (_, index) => ({
+        index,
+        id: String(index),
+        success: true,
+        imageBase64: 'A'.repeat(2000)
+      }));
+
+      mockSendRequest.mockResolvedValue({
+        success: true,
+        type: 'text',
+        message: 'Batch execution completed',
+        results: bulky,
+        summary: { total: 200, succeeded: 200, failed: 0, executed: 200 }
+      });
+
+      const result = await toolHandler({ operations: [{ tool: 'capture_screenshot', params: {} }] });
+
+      expect(result.content[0].text).toContain('[truncated');
+      expect(result.content[0].text.length).toBeLessThan(JSON.stringify(bulky, null, 2).length);
+      expect(result.structuredContent.results).toEqual(bulky);
+    });
+
     it('should throw error on failure when stopOnError=true', async () => {
       mockSendRequest.mockResolvedValue({
         success: false,

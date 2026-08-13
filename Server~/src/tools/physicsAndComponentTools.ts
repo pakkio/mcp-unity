@@ -99,7 +99,7 @@ async function raycastQueryHandler(mcpUnity: McpUnity, params: any): Promise<Cal
       type: 'text' as const,
       text
     }],
-    data: response
+    structuredContent: response
   };
 }
 
@@ -131,7 +131,7 @@ async function copyComponentHandler(mcpUnity: McpUnity, params: any): Promise<Ca
       type: 'text' as const,
       text: response.message || 'Successfully copied component'
     }],
-    data: {
+    structuredContent: {
       action: response.action
     }
   };

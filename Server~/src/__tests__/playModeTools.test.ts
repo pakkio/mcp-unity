@@ -107,7 +107,35 @@ describe('Play Mode Tools', () => {
       expect(result.structuredContent).toEqual({
         action: 'stop',
         isPlaying: false,
-        isPaused: false
+        isPaused: false,
+        transitionPending: false
+      });
+    });
+
+    it('reports a deferred play/stop as pending rather than as an observed state', async () => {
+      registerSetPlayModeStatusTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls[0][3] as (params: any) => Promise<any>;
+
+      // Unity applies play/stop a tick after answering, so isPlaying/isPaused are the requested
+      // target. The tool must not present that as the state the Editor is actually in.
+      mockSendRequest.mockResolvedValue({
+        success: true,
+        isPlaying: true,
+        isPaused: false,
+        action: 'play',
+        transitionPending: true
+      });
+
+      const result = await handler({ action: 'play' });
+
+      expect(result.content[0].text).toContain('accepted');
+      expect(result.content[0].text).toContain('get_play_mode_status');
+      expect(result.content[0].text).not.toContain('executed successfully');
+      expect(result.structuredContent).toEqual({
+        action: 'play',
+        isPlaying: true,
+        isPaused: false,
+        transitionPending: true
       });
     });
 

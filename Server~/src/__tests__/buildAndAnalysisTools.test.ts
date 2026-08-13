@@ -1,6 +1,7 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { ErrorType } from '../utils/errors.js';
 import { registerBuildAndAnalysisTools } from '../tools/buildAndAnalysisTools.js';
+import { TOOL_TIMEOUTS_MS } from '../utils/timeouts.js';
 
 const mockSendRequest = jest.fn();
 const mockMcpUnity = {
@@ -54,6 +55,8 @@ describe('Build and Analysis Tools', () => {
         options: ['Development']
       });
 
+      // A build blocks Unity's main thread for minutes, so it must override the default
+      // request timeout (10s floor) or every call would reject before the build finishes.
       expect(mockSendRequest).toHaveBeenCalledWith({
         method: 'build_project',
         params: {
@@ -61,9 +64,9 @@ describe('Build and Analysis Tools', () => {
           outputPath: 'Builds/Win/Game.exe',
           options: ['Development']
         }
-      });
+      }, { timeout: TOOL_TIMEOUTS_MS.build_project });
       expect(result.content[0].text).toBe('Successfully built project for StandaloneWindows64 at Builds/Win/Game.exe');
-      expect(result.data).toEqual({
+      expect(result.structuredContent).toEqual({
         totalErrors: 0,
         totalWarnings: 2,
         totalSize: 45000000,
@@ -122,7 +125,7 @@ describe('Build and Analysis Tools', () => {
         params: {}
       });
       expect(result.content[0].text).toContain('Compilation Failed: true. Found 1 compiler errors/warnings.');
-      expect(result.data).toEqual({
+      expect(result.structuredContent).toEqual({
         compilationFailed: true,
         errors
       });
@@ -162,7 +165,7 @@ describe('Build and Analysis Tools', () => {
         params: { scriptName: 'PlayerController' }
       });
       expect(result.content[0].text).toContain("Found 1 GameObjects referencing script 'PlayerController'");
-      expect(result.data).toEqual({
+      expect(result.structuredContent).toEqual({
         scriptName: 'PlayerController',
         referenceCount: 1,
         references

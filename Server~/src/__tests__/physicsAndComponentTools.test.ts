@@ -65,7 +65,7 @@ describe('Physics and Component Tools', () => {
         }
       });
       expect(result.content[0].text).toContain("Raycast hit GameObject 'Wall' at distance 5.5m.");
-      expect(result.data).toEqual(expect.objectContaining({
+      expect(result.structuredContent).toEqual(expect.objectContaining({
         hit: true,
         gameObjectName: 'Wall'
       }));
@@ -125,7 +125,7 @@ describe('Physics and Component Tools', () => {
         }
       });
       expect(result.content[0].text).toContain("Successfully pasted component values of 'BoxCollider'");
-      expect(result.data).toEqual({
+      expect(result.structuredContent).toEqual({
         action: 'pasted_values'
       });
     });

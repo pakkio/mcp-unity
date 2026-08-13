@@ -4,6 +4,7 @@ import { McpUnityError, ErrorType } from '../utils/errors.js';
 import * as z from 'zod';
 import { Logger } from '../utils/logger.js';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { getToolTimeout } from '../utils/timeouts.js';
 
 // Build Project Tool
 const buildToolName = 'build_project';
@@ -93,7 +94,7 @@ async function buildProjectHandler(mcpUnity: McpUnity, params: any): Promise<Cal
   const response = await mcpUnity.sendRequest({
     method: buildToolName,
     params
-  });
+  }, { timeout: getToolTimeout(buildToolName) });
 
   if (!response.success) {
     throw new McpUnityError(
@@ -107,7 +108,7 @@ async function buildProjectHandler(mcpUnity: McpUnity, params: any): Promise<Cal
       type: 'text' as const,
       text: response.message || 'Successfully built project'
     }],
-    data: {
+    structuredContent: {
       totalErrors: response.totalErrors,
       totalWarnings: response.totalWarnings,
       totalSize: response.totalSize,
@@ -134,7 +135,7 @@ async function getCompilationErrorsHandler(mcpUnity: McpUnity, params: any): Pro
       type: 'text' as const,
       text: `Compilation Failed: ${response.compilationFailed}. Found ${response.errors?.length || 0} compiler errors/warnings.`
     }],
-    data: {
+    structuredContent: {
       compilationFailed: response.compilationFailed,
       errors: response.errors || []
     }
@@ -163,7 +164,7 @@ async function findScriptReferencesHandler(mcpUnity: McpUnity, params: any): Pro
       type: 'text' as const,
       text: `Found ${response.referenceCount || 0} GameObjects referencing script '${params.scriptName}'`
     }],
-    data: {
+    structuredContent: {
       scriptName: response.scriptName,
       referenceCount: response.referenceCount,
       references: response.references || []

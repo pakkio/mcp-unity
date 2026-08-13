@@ -45,6 +45,28 @@ namespace McpUnity.Tools
                     case "play":
                         if (!EditorApplication.isPlaying)
                         {
+                            // Unity silently refuses to enter play mode while scripts are broken
+                            // or still compiling. Since the actual transition is deferred (below)
+                            // and can no longer be read back before this response is built, catch
+                            // the cases we CAN determine now rather than reporting a success the
+                            // Editor is going to ignore.
+                            if (EditorUtility.scriptCompilationFailed)
+                            {
+                                return McpUnitySocketHandler.CreateErrorResponse(
+                                    "Cannot enter play mode: the project has script compilation errors. " +
+                                    "Use 'get_compilation_errors' to inspect them.",
+                                    "compilation_failed"
+                                );
+                            }
+
+                            if (EditorApplication.isCompiling)
+                            {
+                                return McpUnitySocketHandler.CreateErrorResponse(
+                                    "Cannot enter play mode: scripts are still compiling. Retry once compilation finishes.",
+                                    "compiling"
+                                );
+                            }
+
                             // Entering play mode synchronously fires ExitingEditMode, which
                             // unconditionally closes this WebSocket (StopServer, see
                             // McpUnityServer.OnPlayModeStateChanged) so a client can use fast
@@ -111,24 +133,51 @@ namespace McpUnity.Tools
                         );
                 }
 
+                bool transitionPending = deferredTransition != null;
+                string targetState = isPlaying ? (isPaused ? "Playing (paused)" : "Playing") : "Edit mode";
+
                 var result = new JObject
                 {
                     ["success"] = true,
                     ["type"] = "text",
-                    ["message"] = $"Action '{action}' executed. State: {(isPlaying ? (isPaused ? "Playing (paused)" : "Playing") : "Edit mode")}"
-                        + (deferredTransition != null ? " (transition applying on next editor tick)" : ""),
+                    // 'success' means the action was accepted, not that the Editor has reached the
+                    // target state: a deferred play/stop is applied a tick after this response is
+                    // sent, and can still be vetoed by a playModeStateChanged handler or an
+                    // unsaved-scene prompt. Say so instead of asserting the final state.
+                    ["message"] = transitionPending
+                        ? $"Action '{action}' accepted. Target state: {targetState} (applied on the next editor tick - confirm with 'get_play_mode_status')"
+                        : $"Action '{action}' executed. State: {targetState}",
                     ["action"] = action,
                     ["wasPlaying"] = wasPlaying,
                     ["wasPaused"] = wasPaused,
                     ["isPlaying"] = isPlaying,
-                    ["isPaused"] = isPaused
+                    ["isPaused"] = isPaused,
+                    // True when isPlaying/isPaused describe the requested target rather than the
+                    // state actually observed at the time this response was produced.
+                    ["transitionPending"] = transitionPending
                 };
 
-                McpLogger.LogInfo($"Play mode action '{action}' executed. isPlaying={isPlaying}, isPaused={isPaused}");
+                McpLogger.LogInfo($"Play mode action '{action}' {(transitionPending ? "accepted" : "executed")}. isPlaying={isPlaying}, isPaused={isPaused}, transitionPending={transitionPending}");
 
-                if (deferredTransition != null)
+                if (transitionPending)
                 {
-                    EditorApplication.delayCall += () => deferredTransition();
+                    EditorApplication.delayCall += () =>
+                    {
+                        deferredTransition();
+
+                        // Surface a vetoed transition in the Unity console at least - the client's
+                        // response has long since been sent by this point.
+                        bool expectedPlaying = isPlaying;
+                        EditorApplication.delayCall += () =>
+                        {
+                            if (EditorApplication.isPlaying != expectedPlaying)
+                            {
+                                McpLogger.LogWarning(
+                                    $"Play mode action '{action}' did not take effect: expected isPlaying={expectedPlaying}, " +
+                                    $"actual isPlaying={EditorApplication.isPlaying}. The transition was likely blocked by the Editor.");
+                            }
+                        };
+                    };
                 }
 
                 return result;
