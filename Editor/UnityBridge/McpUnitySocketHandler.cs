@@ -2,19 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEditor;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using WebSocketSharp;
-using WebSocketSharp.Server;
 using McpUnity.Tools;
 using McpUnity.Resources;
 using Unity.EditorCoroutines.Editor;
 using System.Collections;
 using System.Collections.Specialized;
 using System.Collections.Concurrent;
+using System.Net.WebSockets;
 using McpUnity.Utils;
 
 namespace McpUnity.Unity
@@ -26,8 +26,7 @@ namespace McpUnity.Unity
     /// This replaces dispatching through EditorApplication.delayCall: delayCall is a plain
     /// static delegate, and a "+=" performed from the WebSocketSharp background thread is not
     /// reliably observed/drained by the main thread while the Editor is idle in the
-    /// background. The result was that requests received while Unity was not the foreground
-    /// app were never processed, and the MCP client timed out. Draining a thread-safe queue
+    /// background. Draining a thread-safe queue
     /// from EditorApplication.update fixes this without relying on cross-thread delegate
     /// mutation.
     /// </summary>
@@ -58,20 +57,28 @@ namespace McpUnity.Unity
     }
 
     /// <summary>
-    /// WebSocket handler for MCP Unity communications
+    /// WebSocket handler for MCP Unity communications. Uses native System.Net.WebSockets.WebSocket.
     /// </summary>
-    public class McpUnitySocketHandler : WebSocketBehavior
+    public class McpUnitySocketHandler
     {
         private readonly McpUnityServer _server;
         private readonly int _connectionGeneration;
+        private readonly string _id;
+        private readonly WebSocket _webSocket;
+        private readonly NameValueCollection _headers;
+
+        public string ID => _id;
 
         /// <summary>
         /// Creates a WebSocket handler for the active server generation.
         /// </summary>
-        public McpUnitySocketHandler(McpUnityServer server, int connectionGeneration)
+        public McpUnitySocketHandler(McpUnityServer server, int connectionGeneration, string id, WebSocket webSocket, NameValueCollection headers)
         {
             _server = server;
             _connectionGeneration = connectionGeneration;
+            _id = id;
+            _webSocket = webSocket;
+            _headers = headers;
         }
 
         /// <summary>
@@ -130,19 +137,53 @@ namespace McpUnity.Unity
                 }
             };
         }
-        
+
+        /// <summary>
+        /// Sends a text message to the WebSocket client.
+        /// </summary>
+        public void Send(string message)
+        {
+            if (_webSocket.State == WebSocketState.Open)
+            {
+                byte[] bytes = Encoding.UTF8.GetBytes(message);
+                var segment = new ArraySegment<byte>(bytes);
+                try
+                {
+                    // WebSocket.SendAsync is not thread-safe for concurrent operations
+                    lock (_webSocket)
+                    {
+                        _webSocket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None).Wait();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    McpLogger.LogError($"Error sending WebSocket message: {ex.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Closes the WebSocket connection gracefully.
+        /// </summary>
+        public void Close(ushort code, string reason)
+        {
+            if (_webSocket.State == WebSocketState.Open)
+            {
+                try
+                {
+                    _webSocket.CloseAsync((WebSocketCloseStatus)code, reason ?? "", CancellationToken.None).Wait();
+                }
+                catch (Exception ex)
+                {
+                    McpLogger.LogWarning($"Error closing WebSocket connection: {ex.Message}");
+                }
+            }
+        }
+
         /// <summary>
         /// Handle incoming messages from WebSocket clients.
-        /// WebSocketSharp invokes this on a background thread; we marshal the entire
-        /// message-handling body onto Unity's main thread via EditorApplication.delayCall
-        /// before touching any Editor APIs.
-        ///
-        /// Why this matters: accessing EditorStyles or scheduling EditorCoroutines from
-        /// a background thread can NRE inside PropertyEditor+Styles..cctor, which under
-        /// CLR rules permanently bricks that type for the rest of the AppDomain and
-        /// turns the Inspector black until Unity is restarted.
         /// </summary>
-        protected override void OnMessage(MessageEventArgs e)
+        public void OnMessage(string data)
         {
             if (!_server.ShouldTrackClient(_connectionGeneration))
             {
@@ -150,7 +191,6 @@ namespace McpUnity.Unity
                 return;
             }
 
-            string data = e.Data;
             // Dispatch via a thread-safe queue drained in EditorApplication.update rather than
             // EditorApplication.delayCall. A delayCall "+=" from this background thread is not
             // reliably drained by the main thread while the Editor is unfocused/idle, so the
@@ -161,13 +201,8 @@ namespace McpUnity.Unity
         /// <summary>
         /// Handle WebSocket connection open.
         /// Supports multiple concurrent MCP clients (e.g. multiple Claude Code instances).
-        /// Cleans up only inactive (dead) sessions to prevent file descriptor accumulation
-        /// while keeping other active clients connected.
-        /// websocket-sharp uses Mono's IOSelector/select(), which can crash when FD
-        /// values exceed ~1024, so stale session cleanup is important.
-        /// See: https://github.com/CoderGamester/mcp-unity/issues/110
         /// </summary>
-        protected override void OnOpen()
+        public void OnOpen()
         {
             if (!_server.ShouldTrackClient(_connectionGeneration))
             {
@@ -175,34 +210,12 @@ namespace McpUnity.Unity
                 return;
             }
 
-            // Clean up inactive (dead) sessions to prevent file descriptor accumulation.
-            // Only removes sessions that are no longer connected — active clients are preserved.
-            // Note: Do NOT use ActiveIDs here — it pings every client and blocks.
-            var inactiveIds = Sessions.InactiveIDs.ToList();
-            if (inactiveIds.Count > 0)
-            {
-                foreach (var oldId in inactiveIds)
-                {
-                    // Also remove from our tracking dictionary
-                    _server.Clients.TryRemove(oldId, out _);
-                    try
-                    {
-                        Sessions.CloseSession(oldId, CloseStatusCode.Normal, "Stale session cleanup");
-                    }
-                    catch (Exception ex)
-                    {
-                        McpLogger.LogWarning($"Error closing stale session {oldId}: {ex.Message}");
-                    }
-                }
-                McpLogger.LogInfo($"Cleaned up {inactiveIds.Count} inactive session(s)");
-            }
-
             // Extract client name from the X-Client-Name header (if available)
             string clientName = "";
-            NameValueCollection headers = Context.Headers;
-            if (headers != null && headers.Contains("X-Client-Name"))
+            NameValueCollection headers = _headers;
+            if (headers != null && headers.Get("X-Client-Name") != null)
             {
-                clientName = headers["X-Client-Name"];
+                clientName = headers.Get("X-Client-Name");
             }
 
             // When remote connections are allowed, the server is reachable by any host on the
@@ -212,8 +225,8 @@ namespace McpUnity.Unity
             McpUnitySettings settings = McpUnitySettings.Instance;
             if (settings.AllowRemoteConnections && !string.IsNullOrEmpty(settings.AuthToken))
             {
-                string providedToken = headers != null && headers.Contains("X-Mcp-Auth-Token")
-                    ? headers["X-Mcp-Auth-Token"]
+                string providedToken = headers != null && headers.Get("X-Mcp-Auth-Token") != null
+                    ? headers.Get("X-Mcp-Auth-Token")
                     : null;
 
                 if (!SecureTokenEquals(providedToken, settings.AuthToken))
@@ -222,10 +235,9 @@ namespace McpUnity.Unity
                         $"Rejected WebSocket connection from client '{(string.IsNullOrEmpty(clientName) ? "Unknown" : clientName)}': missing or invalid X-Mcp-Auth-Token.");
                     try
                     {
-                        WebSocket webSocket = Context?.WebSocket;
-                        if (webSocket?.ReadyState == WebSocketState.Open)
+                        if (_webSocket.State == WebSocketState.Open)
                         {
-                            webSocket.Close(CloseStatusCode.PolicyViolation, "Missing or invalid auth token");
+                            _webSocket.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Missing or invalid auth token", CancellationToken.None).Wait();
                         }
                     }
                     catch (Exception ex)
@@ -251,28 +263,22 @@ namespace McpUnity.Unity
         /// <summary>
         /// Handle WebSocket connection close
         /// </summary>
-        protected override void OnClose(CloseEventArgs e)
+        public void OnClose()
         {
             _server.Clients.TryGetValue(ID, out string clientName);
 
             // Remove the client from the server
             _server.Clients.TryRemove(ID, out _);
 
-            string reason = e.Reason;
-            if (reason == "An exception has occurred while receiving.")
-            {
-                reason = "connection closed by client";
-            }
-
-            McpLogger.LogInfo($"WebSocket client '{clientName}' disconnected: {reason} (Remaining clients: {_server.Clients.Count})");
+            McpLogger.LogInfo($"WebSocket client '{clientName}' disconnected (Remaining clients: {_server.Clients.Count})");
         }
 
         /// <summary>
         /// Handle WebSocket errors
         /// </summary>
-        protected override void OnError(ErrorEventArgs e)
+        public void OnError(Exception ex)
         {
-            McpLogger.LogError($"WebSocket error: {e.Message}");
+            McpLogger.LogError($"WebSocket error: {ex.Message}");
         }
 
         /// <summary>
@@ -347,10 +353,9 @@ namespace McpUnity.Unity
         {
             try
             {
-                WebSocket webSocket = Context?.WebSocket;
-                if (webSocket?.ReadyState == WebSocketState.Open)
+                if (_webSocket.State == WebSocketState.Open)
                 {
-                    webSocket.Close(CloseStatusCode.Away, "Server is restarting");
+                    _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server is restarting", CancellationToken.None).Wait();
                 }
             }
             catch (Exception ex)
@@ -358,7 +363,7 @@ namespace McpUnity.Unity
                 McpLogger.LogWarning($"Error closing untracked WebSocket connection: {ex.Message}");
             }
         }
-        
+
         /// <summary>
         /// Execute a tool with the provided parameters
         /// </summary>
@@ -384,10 +389,10 @@ namespace McpUnity.Unity
                     "tool_execution_error"
                 ));
             }
-            
+
             yield return null;
         }
-        
+
         /// <summary>
         /// Fetch a resource with the provided parameters
         /// </summary>
@@ -415,7 +420,7 @@ namespace McpUnity.Unity
             }
             yield return null;
         }
-        
+
         /// <summary>
         /// Create a JSON-RPC 2.0 response
         /// </summary>
@@ -429,7 +434,7 @@ namespace McpUnity.Unity
             {
                 ["id"] = requestId
             };
-            
+
             // Add result or error
             if (result.TryGetValue("error", out var errorObj))
             {
@@ -439,7 +444,7 @@ namespace McpUnity.Unity
             {
                 jsonRpcResponse["result"] = result;
             }
-            
+
             return jsonRpcResponse;
         }
     }

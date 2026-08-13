@@ -146,6 +146,7 @@ If no valid setting is found, Node falls back to:
 - `set_play_mode_status` — Control Unity play mode (play, pause, stop, step)
 - `unload_scene` — Unload scene from hierarchy
 - `get_gameobject` — Get detailed GameObject info
+- `capture_screenshot` — Captures a screenshot of the Scene view or a named camera
 - `get_console_logs` — Retrieve Unity console logs
 - `recompile_scripts` — Recompile all project scripts
 - `duplicate_gameobject` — Duplicate GameObjects with optional rename/reparent

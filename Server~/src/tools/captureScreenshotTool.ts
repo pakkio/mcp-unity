@@ -14,6 +14,7 @@ const paramsSchema = z.object({
   maxWidth: z.number().int().min(64).max(4096).default(1024).describe('Maximum image width in pixels; height is scaled to match the source aspect ratio.'),
   format: z.enum(['png', 'jpg']).default('png').describe('Image encoding format'),
   jpgQuality: z.number().int().min(1).max(100).default(90).describe('JPEG quality (1-100), only used when format is "jpg"'),
+  savePath: z.string().optional().describe('Local file path (relative to the Unity project root, or absolute) to save the screenshot. If specified, the image is saved directly on the Unity host to avoid base64 transport overhead.'),
 });
 
 /**
@@ -49,6 +50,7 @@ async function toolHandler(mcpUnity: McpUnity, params: z.infer<typeof paramsSche
       maxWidth: params.maxWidth,
       format: params.format,
       jpgQuality: params.jpgQuality,
+      savePath: params.savePath,
     }
   }, { timeout: getToolTimeout(toolName) });
 
@@ -59,17 +61,20 @@ async function toolHandler(mcpUnity: McpUnity, params: z.infer<typeof paramsSche
     );
   }
 
-  return {
-    content: [
-      {
-        type: 'text',
-        text: response.message || 'Screenshot captured'
-      },
-      {
-        type: 'image',
-        data: response.imageBase64,
-        mimeType: response.mimeType
-      }
-    ]
-  };
+  const content: any[] = [
+    {
+      type: 'text',
+      text: response.message || 'Screenshot captured'
+    }
+  ];
+
+  if (response.imageBase64) {
+    content.push({
+      type: 'image',
+      data: response.imageBase64,
+      mimeType: response.mimeType
+    });
+  }
+
+  return { content };
 }

@@ -8,7 +8,6 @@ using McpUnity.Tools;
 using McpUnity.Resources;
 using McpUnity.Services;
 using McpUnity.Utils;
-using WebSocketSharp.Server;
 using System.IO;
 using System.Net.Sockets;
 using UnityEditor.Callbacks;
@@ -47,7 +46,7 @@ namespace McpUnity.Unity
         // busy editor, short enough that the probe thread is always gone long before the next start.
         private const int LivenessProbeTimeoutMs = 2000;
 
-        private WebSocketServer _webSocketServer;
+        private McpWebSocketServer _webSocketServer;
         private CancellationTokenSource _cts;
         private TestRunnerService _testRunnerService;
         private ConsoleLogsService _consoleLogsService;
@@ -366,14 +365,12 @@ namespace McpUnity.Unity
                 StopServer();
             }
 
-            WebSocketServer webSocketServer = null;
+            McpWebSocketServer webSocketServer = null;
             try
             {
                 int connectionGeneration = Interlocked.Increment(ref _connectionGeneration);
                 var host = McpUnitySettings.Instance.AllowRemoteConnections ? "0.0.0.0" : "localhost";
-                webSocketServer = new WebSocketServer($"ws://{host}:{McpUnitySettings.Instance.Port}");
-                webSocketServer.Log.Output = (data, path) => { };
-                webSocketServer.AddWebSocketService("/McpUnity", () => new McpUnitySocketHandler(this, connectionGeneration));
+                webSocketServer = new McpWebSocketServer(host, McpUnitySettings.Instance.Port, "/McpUnity", this, connectionGeneration);
                 webSocketServer.Start();
                 _webSocketServer = webSocketServer;
                 _activeConnectionGeneration = connectionGeneration;
@@ -694,7 +691,7 @@ namespace McpUnity.Unity
             }
         }
 
-        private void CleanupFailedStart(WebSocketServer webSocketServer)
+        private void CleanupFailedStart(McpWebSocketServer webSocketServer)
         {
             McpBackgroundTick.Stop();
 
@@ -740,17 +737,7 @@ namespace McpUnity.Unity
 
             try
             {
-                var service = _webSocketServer.WebSocketServices["/McpUnity"];
-                if (service?.Sessions != null)
-                {
-                    // Get all active session IDs and close each with the custom code
-                    var sessionIds = new List<string>(service.Sessions.IDs);
-                    foreach (var sessionId in sessionIds)
-                    {
-                        service.Sessions.CloseSession(sessionId, closeCode, reason);
-                    }
-                    McpLogger.LogInfo($"Closed {sessionIds.Count} client connection(s) with code {closeCode}: {reason}");
-                }
+                _webSocketServer.CloseAllClients(closeCode, reason);
             }
             catch (Exception ex)
             {

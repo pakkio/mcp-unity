@@ -26,6 +26,7 @@ namespace McpUnity.Tools
             int maxWidth = parameters["maxWidth"]?.ToObject<int?>() ?? 1024;
             string format = (parameters["format"]?.ToObject<string>() ?? "png").ToLower();
             int jpgQuality = parameters["jpgQuality"]?.ToObject<int?>() ?? 90;
+            string savePath = parameters["savePath"]?.ToObject<string>();
 
             if (maxWidth < 64 || maxWidth > 4096)
             {
@@ -112,21 +113,67 @@ namespace McpUnity.Tools
                     ? texture.EncodeToJPG(jpgQuality)
                     : texture.EncodeToPNG();
 
-                string base64 = Convert.ToBase64String(imageBytes);
+                string base64 = "";
                 string mimeType = format == "jpg" ? "image/jpeg" : "image/png";
+                bool savedToFile = false;
+                string absoluteSavePath = "";
 
-                McpLogger.LogInfo($"{Name}: captured {width}x{height} {format} screenshot of {sourceDescription}");
+                if (!string.IsNullOrEmpty(savePath))
+                {
+                    try
+                    {
+                        absoluteSavePath = System.IO.Path.GetFullPath(savePath);
+                        string directory = System.IO.Path.GetDirectoryName(absoluteSavePath);
+                        if (!string.IsNullOrEmpty(directory))
+                        {
+                            System.IO.Directory.CreateDirectory(directory);
+                        }
+                        System.IO.File.WriteAllBytes(absoluteSavePath, imageBytes);
+                        savedToFile = true;
 
-                return new JObject
+                        // If saved inside Assets, refresh the AssetDatabase so it shows up in Unity
+                        if (absoluteSavePath.Replace('\\', '/').Contains("/Assets/"))
+                        {
+                            AssetDatabase.Refresh();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        return McpUnitySocketHandler.CreateErrorResponse(
+                            $"Failed to save screenshot to path '{savePath}': {ex.Message}",
+                            "io_error"
+                        );
+                    }
+                }
+                else
+                {
+                    base64 = Convert.ToBase64String(imageBytes);
+                }
+
+                McpLogger.LogInfo($"{Name}: captured {width}x{height} {format} screenshot of {sourceDescription}" + (savedToFile ? $" saved to {absoluteSavePath}" : ""));
+
+                var result = new JObject
                 {
                     ["success"] = true,
                     ["type"] = "text",
-                    ["message"] = $"Captured {width}x{height} screenshot of {sourceDescription}",
-                    ["imageBase64"] = base64,
-                    ["mimeType"] = mimeType,
+                    ["message"] = savedToFile
+                        ? $"Captured {width}x{height} screenshot of {sourceDescription} and saved to {absoluteSavePath}"
+                        : $"Captured {width}x{height} screenshot of {sourceDescription}",
                     ["width"] = width,
                     ["height"] = height
                 };
+
+                if (savedToFile)
+                {
+                    result["savePath"] = absoluteSavePath;
+                }
+                else
+                {
+                    result["imageBase64"] = base64;
+                    result["mimeType"] = mimeType;
+                }
+
+                return result;
             }
             finally
             {

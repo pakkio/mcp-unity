@@ -1,0 +1,294 @@
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Net.WebSockets;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using McpUnity.Utils;
+
+namespace McpUnity.Unity
+{
+    /// <summary>
+    /// A native .NET standard based WebSocket server that implements RFC 6455 over a TcpListener.
+    /// Eliminates the dependency on third-party websocket-sharp.dll.
+    /// </summary>
+    public class McpWebSocketServer
+    {
+        private readonly string _host;
+        private readonly int _port;
+        private readonly string _path;
+        private readonly McpUnityServer _server;
+        private readonly int _connectionGeneration;
+
+        private TcpListener _listener;
+        private CancellationTokenSource _cts;
+        private bool _isListening;
+
+        private readonly ConcurrentDictionary<string, McpUnitySocketHandler> _connections = new ConcurrentDictionary<string, McpUnitySocketHandler>();
+
+        public bool IsListening => _isListening;
+        public ICollection<McpUnitySocketHandler> ActiveConnections => _connections.Values;
+
+        public McpWebSocketServer(string host, int port, string path, McpUnityServer server, int connectionGeneration)
+        {
+            _host = host;
+            _port = port;
+            _path = path;
+            _server = server;
+            _connectionGeneration = connectionGeneration;
+        }
+
+        public void Start()
+        {
+            if (_isListening) return;
+
+            IPAddress ipAddress;
+            if (_host == "0.0.0.0")
+            {
+                ipAddress = IPAddress.Any;
+            }
+            else if (_host == "localhost")
+            {
+                ipAddress = IPAddress.Loopback;
+            }
+            else if (!IPAddress.TryParse(_host, out ipAddress))
+            {
+                ipAddress = IPAddress.Loopback;
+            }
+
+            _listener = new TcpListener(ipAddress, _port);
+            // Allow address reuse to match standard socket options
+            _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            _listener.Start();
+
+            _isListening = true;
+            _cts = new CancellationTokenSource();
+
+            // Run accept loop in a separate task
+            Task.Run(() => AcceptLoopAsync(_cts.Token));
+        }
+
+        public void Stop()
+        {
+            if (!_isListening) return;
+
+            _isListening = false;
+            _cts?.Cancel();
+
+            try
+            {
+                _listener?.Stop();
+            }
+            catch (Exception ex)
+            {
+                McpLogger.LogWarning($"Error stopping TcpListener: {ex.Message}");
+            }
+
+            CloseAllClients(1001, "Server stopping");
+            _connections.Clear();
+        }
+
+        public void CloseAllClients(ushort closeCode, string reason)
+        {
+            var handlers = new List<McpUnitySocketHandler>(_connections.Values);
+            foreach (var handler in handlers)
+            {
+                try
+                {
+                    handler.Close(closeCode, reason);
+                }
+                catch (Exception ex)
+                {
+                    McpLogger.LogWarning($"Error closing connection {handler.ID}: {ex.Message}");
+                }
+            }
+            _connections.Clear();
+        }
+
+        public void CloseSession(string id, ushort closeCode, string reason)
+        {
+            if (_connections.TryGetValue(id, out var handler))
+            {
+                handler.Close(closeCode, reason);
+                _connections.TryRemove(id, out _);
+            }
+        }
+
+        private async Task AcceptLoopAsync(CancellationToken ct)
+        {
+            while (_isListening && !ct.IsCancellationRequested)
+            {
+                try
+                {
+                    TcpClient tcpClient = await _listener.AcceptTcpClientAsync();
+                    // Process connection in a separate task
+                    _ = Task.Run(() => ProcessConnectionAsync(tcpClient, ct), ct);
+                }
+                catch (Exception)
+                {
+                    if (!_isListening) break;
+                    await Task.Delay(100, ct);
+                }
+            }
+        }
+
+        private async Task ProcessConnectionAsync(TcpClient tcpClient, CancellationToken ct)
+        {
+            using (tcpClient)
+            {
+                NetworkStream stream = tcpClient.GetStream();
+                try
+                {
+                    // 1. Read HTTP Handshake Request
+                    var headers = new NameValueCollection();
+                    string requestPath = "";
+                    string secWebSocketKey = null;
+
+                    string firstLine = await ReadLineAsync(stream, ct);
+                    if (string.IsNullOrEmpty(firstLine)) return;
+
+                    var requestParts = firstLine.Split(' ');
+                    if (requestParts.Length >= 2)
+                    {
+                        requestPath = requestParts[1];
+                    }
+
+                    // Read remaining headers
+                    while (true)
+                    {
+                        string line = await ReadLineAsync(stream, ct);
+                        if (string.IsNullOrEmpty(line)) break; // End of headers
+
+                        int colonIdx = line.IndexOf(':');
+                        if (colonIdx > 0)
+                        {
+                            string key = line.Substring(0, colonIdx).Trim();
+                            string val = line.Substring(colonIdx + 1).Trim();
+                            headers.Add(key, val);
+
+                            if (key.Equals("Sec-WebSocket-Key", StringComparison.OrdinalIgnoreCase))
+                            {
+                                secWebSocketKey = val;
+                            }
+                        }
+                    }
+
+                    // 2. Validate Path and WebSocket upgrade headers
+                    string cleanPath = requestPath.Split('?')[0]; // strip query params
+                    if (!cleanPath.Equals(_path, StringComparison.OrdinalIgnoreCase) && 
+                        !cleanPath.Equals(_path + "/", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Path mismatch, send 404
+                        byte[] responseBytes = Encoding.UTF8.GetBytes("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
+                        await stream.WriteAsync(responseBytes, 0, responseBytes.Length, ct);
+                        return;
+                    }
+
+                    if (string.IsNullOrEmpty(secWebSocketKey))
+                    {
+                        // Invalid WebSocket request, send 400
+                        byte[] responseBytes = Encoding.UTF8.GetBytes("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n");
+                        await stream.WriteAsync(responseBytes, 0, responseBytes.Length, ct);
+                        return;
+                    }
+
+                    // 3. Compute Sec-WebSocket-Accept and complete handshake
+                    string combined = secWebSocketKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+                    byte[] sha1Hash;
+                    using (var sha1 = SHA1.Create())
+                    {
+                        sha1Hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(combined));
+                    }
+                    string acceptKey = Convert.ToBase64String(sha1Hash);
+
+                    var responseBuilder = new StringBuilder();
+                    responseBuilder.Append("HTTP/1.1 101 Switching Protocols\r\n");
+                    responseBuilder.Append("Upgrade: websocket\r\n");
+                    responseBuilder.Append("Connection: Upgrade\r\n");
+                    responseBuilder.Append($"Sec-WebSocket-Accept: {acceptKey}\r\n\r\n");
+
+                    byte[] handshakeBytes = Encoding.UTF8.GetBytes(responseBuilder.ToString());
+                    await stream.WriteAsync(handshakeBytes, 0, handshakeBytes.Length, ct);
+
+                    // 4. Upgrade stream to WebSocket
+                    using (WebSocket webSocket = WebSocket.CreateFromStream(stream, isServer: true, subProtocol: null, keepAliveInterval: TimeSpan.FromSeconds(30)))
+                    {
+                        string id = Guid.NewGuid().ToString();
+                        var handler = new McpUnitySocketHandler(_server, _connectionGeneration, id, webSocket, headers);
+                        _connections[id] = handler;
+
+                        // Call connection lifecycle methods
+                        handler.OnOpen();
+
+                        // Receive loop
+                        byte[] buffer = new byte[8192];
+                        var messageBuilder = new StringBuilder();
+
+                        while (webSocket.State == WebSocketState.Open && !ct.IsCancellationRequested)
+                        {
+                            WebSocketReceiveResult result;
+                            try
+                            {
+                                var segment = new ArraySegment<byte>(buffer);
+                                result = await webSocket.ReceiveAsync(segment, ct);
+                            }
+                            catch (Exception)
+                            {
+                                break;
+                            }
+
+                            if (result.MessageType == WebSocketMessageType.Close)
+                            {
+                                try
+                                {
+                                    await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closed by peer", CancellationToken.None);
+                                }
+                                catch { }
+                                break;
+                            }
+
+                            if (result.MessageType == WebSocketMessageType.Text)
+                            {
+                                messageBuilder.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
+                                if (result.EndOfMessage)
+                                {
+                                    string messageText = messageBuilder.ToString();
+                                    messageBuilder.Clear();
+                                    handler.OnMessage(messageText);
+                                }
+                            }
+                        }
+
+                        handler.OnClose();
+                        _connections.TryRemove(id, out _);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    McpLogger.LogError($"Connection error: {ex.Message}");
+                }
+            }
+        }
+
+        private static async Task<string> ReadLineAsync(Stream stream, CancellationToken ct)
+        {
+            var bytes = new List<byte>();
+            byte[] oneByte = new byte[1];
+            while (!ct.IsCancellationRequested)
+            {
+                int read = await stream.ReadAsync(oneByte, 0, 1, ct);
+                if (read == 0) break;
+                byte val = oneByte[0];
+                if (val == '\n') break;
+                if (val != '\r') bytes.Add(val);
+            }
+            return Encoding.UTF8.GetString(bytes.ToArray());
+        }
+    }
+}
