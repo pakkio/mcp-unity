@@ -130,7 +130,7 @@ describe('Physics and Component Tools', () => {
       });
     });
 
-    it('throws validation error when source parameters are missing', async () => {
+    it('throws validation error when source or target parameters are missing', async () => {
       registerPhysicsAndComponentTools(mockServer as any, mockMcpUnity as any, mockLogger as any);
       const handler = mockServerTool.mock.calls.find(call => call[0] === 'copy_component')![3] as (params: any) => Promise<any>;
 
@@ -139,6 +139,46 @@ describe('Physics and Component Tools', () => {
         targetObjectPath: 'Enemy'
       })).rejects.toMatchObject({
         type: ErrorType.VALIDATION
+      });
+
+      await expect(handler({
+        componentType: 'BoxCollider',
+        sourceObjectPath: 'Player'
+      })).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+
+      await expect(handler({
+        sourceObjectPath: 'Player',
+        targetObjectPath: 'Enemy'
+      })).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+    });
+
+    it('throws error when copy_component or raycast_query fails in Unity', async () => {
+      registerPhysicsAndComponentTools(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const copyHandler = mockServerTool.mock.calls.find(call => call[0] === 'copy_component')![3] as (params: any) => Promise<any>;
+      mockSendRequest.mockResolvedValue({ success: false });
+
+      await expect(copyHandler({
+        componentType: 'BoxCollider',
+        sourceObjectPath: 'Player',
+        targetObjectPath: 'Enemy'
+      })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+
+      const raycastHandler = mockServerTool.mock.calls.find(call => call[0] === 'raycast_query')![3] as (params: any) => Promise<any>;
+      await expect(raycastHandler({})).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+
+      await expect(raycastHandler({
+        origin: { x: 0, y: 0, z: 0 },
+        direction: { x: 0, y: 1, z: 0 }
+      })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
       });
     });
   });

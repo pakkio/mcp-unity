@@ -59,6 +59,17 @@ describe('Dashboard Support Tools', () => {
         logType: 'error',
         includeStackTrace: false
       });
+      expect(result.content[0].text).toContain('Boom');
+    });
+
+    it('throws error when get_console_logs fails in Unity', async () => {
+      registerGetConsoleLogsTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls[0][3] as (params: any) => Promise<any>;
+      mockSendRequest.mockResolvedValue({ success: false, message: 'Failed to fetch logs' });
+
+      await expect(handler({})).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
     });
   });
 

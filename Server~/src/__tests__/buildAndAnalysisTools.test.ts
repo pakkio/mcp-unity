@@ -171,5 +171,38 @@ describe('Build and Analysis Tools', () => {
         references
       });
     });
+
+    it('throws error when get_compilation_errors fails', async () => {
+      registerBuildAndAnalysisTools(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'get_compilation_errors')![3] as (params: any) => Promise<any>;
+      mockSendRequest.mockResolvedValue({ success: false });
+
+      await expect(handler({})).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+    });
+
+    it('throws error when find_script_references fails or missing params', async () => {
+      registerBuildAndAnalysisTools(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'find_script_references')![3] as (params: any) => Promise<any>;
+
+      await expect(handler({})).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+
+      mockSendRequest.mockResolvedValue({ success: false });
+      await expect(handler({ scriptName: 'Test' })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+    });
+
+    it('validates required parameters for build_project', async () => {
+      registerBuildAndAnalysisTools(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'build_project')![3] as (params: any) => Promise<any>;
+
+      await expect(handler({})).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+    });
   });
 });

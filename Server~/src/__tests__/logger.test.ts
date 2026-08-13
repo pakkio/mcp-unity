@@ -91,6 +91,28 @@ describe('Logger', () => {
       const logger = new Logger('Test');
       expect(typeof logger.error).toBe('function');
     });
+
+    it('should format and write logs when logging is enabled', () => {
+      const logger = new Logger('TestPrefix', LogLevel.DEBUG);
+      jest.spyOn(logger, 'isLoggingEnabled').mockReturnValue(true);
+      jest.spyOn(logger, 'isLoggingFileEnabled').mockReturnValue(false);
+
+      logger.info('Test message without data');
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('[INFO] [TestPrefix] Test message without data'));
+
+      logger.info('Test message with data', { foo: 'bar' });
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('[INFO] [TestPrefix] Test message with data'), { foo: 'bar' });
+    });
+
+    it('should handle file logging when enabled', () => {
+      const logger = new Logger('TestPrefix', LogLevel.DEBUG);
+      jest.spyOn(logger, 'isLoggingFileEnabled').mockReturnValue(true);
+      jest.spyOn(logger, 'isLoggingEnabled').mockReturnValue(false);
+
+      expect(() => {
+        logger.info('File log message', { count: 1 });
+      }).not.toThrow();
+    });
   });
 });
 

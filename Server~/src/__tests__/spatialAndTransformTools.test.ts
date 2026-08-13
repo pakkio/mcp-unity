@@ -8,7 +8,8 @@ import {
   registerMeasureDistanceTool,
   registerGetFloorHeightTool,
   registerGetNearbyObjectsTool,
-  registerFrameCameraOnTool
+  registerFrameCameraOnTool,
+  registerSpatialTools
 } from '../tools/spatialTools.js';
 import { registerTransformTools } from '../tools/transformTools.js';
 
@@ -91,6 +92,62 @@ describe('Spatial and Transform Tools', () => {
       const frameRes = await frameHandler({ objectPath: 'Player' });
       expect(frameRes.content[0].text).toContain('Camera framed');
     });
+
+    it('validates required identifiers and references in spatial tools', async () => {
+      const mockServerTool = jest.fn();
+      const mockServer = { tool: mockServerTool };
+
+      registerGetBoundsTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      registerPlaceNextToTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      registerMeasureDistanceTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+
+      const boundsHandler = mockServerTool.mock.calls.find(c => c[0] === 'get_bounds')![3];
+      await expect(boundsHandler({})).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+
+      const placeHandler = mockServerTool.mock.calls.find(c => c[0] === 'place_next_to')![3];
+      await expect(placeHandler({ objectPath: 'CubeA' })).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+
+      const measureHandler = mockServerTool.mock.calls.find(c => c[0] === 'measure_distance')![3];
+      await expect(measureHandler({ objectPath: 'CubeA' })).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+    });
+
+    it('throws error when spatial tool execution fails in Unity', async () => {
+      const mockServerTool = jest.fn();
+      const mockServer = { tool: mockServerTool };
+
+      registerSpatialTools(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const boundsHandler = mockServerTool.mock.calls.find(c => c[0] === 'get_bounds')![3];
+      mockSendRequest.mockResolvedValueOnce({ success: false, message: 'Object not found' });
+
+      await expect(boundsHandler({ objectPath: 'Missing' })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+
+      const nearbyHandler = mockServerTool.mock.calls.find(c => c[0] === 'get_nearby_objects')![3];
+      await expect(nearbyHandler({})).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+
+      const frameHandler = mockServerTool.mock.calls.find(c => c[0] === 'frame_camera_on')![3];
+      await expect(frameHandler({})).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+    });
+
+    it('registers all spatial tools via registerSpatialTools', () => {
+      const mockServerTool = jest.fn();
+      const mockServer = { tool: mockServerTool };
+
+      registerSpatialTools(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      expect(mockServerTool).toHaveBeenCalledWith('get_bounds', expect.any(String), expect.any(Object), expect.any(Function));
+      expect(mockServerTool).toHaveBeenCalledWith('get_nearby_objects', expect.any(String), expect.any(Object), expect.any(Function));
+    });
   });
 
   describe('transform tools', () => {
@@ -139,6 +196,37 @@ describe('Spatial and Transform Tools', () => {
       const setHandler = mockServerTool.mock.calls.find(c => c[0] === 'set_transform')![3];
       await expect(setHandler({ objectPath: 'Player' })).rejects.toMatchObject({
         type: ErrorType.VALIDATION
+      });
+    });
+
+    it('throws error when transform execution fails in Unity', async () => {
+      const mockServerTool = jest.fn();
+      const mockServer = { tool: mockServerTool };
+
+      registerTransformTools(mockServer as any, mockMcpUnity as any, mockLogger as any);
+
+      const moveHandler = mockServerTool.mock.calls.find(c => c[0] === 'move_gameobject')![3];
+      mockSendRequest.mockResolvedValueOnce({ success: false });
+      await expect(moveHandler({ objectPath: 'Player', position: { x: 0, y: 0, z: 0 } })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+
+      const rotHandler = mockServerTool.mock.calls.find(c => c[0] === 'rotate_gameobject')![3];
+      mockSendRequest.mockResolvedValueOnce({ success: false });
+      await expect(rotHandler({ objectPath: 'Player', rotation: { x: 0, y: 0, z: 0 } })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+
+      const scaleHandler = mockServerTool.mock.calls.find(c => c[0] === 'scale_gameobject')![3];
+      mockSendRequest.mockResolvedValueOnce({ success: false });
+      await expect(scaleHandler({ objectPath: 'Player', scale: { x: 1, y: 1, z: 1 } })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+
+      const setHandler = mockServerTool.mock.calls.find(c => c[0] === 'set_transform')![3];
+      mockSendRequest.mockResolvedValueOnce({ success: false });
+      await expect(setHandler({ objectPath: 'Player', position: { x: 1, y: 1, z: 1 } })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
       });
     });
   });

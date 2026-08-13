@@ -126,6 +126,108 @@ describe('McpUnity Advanced Methods and Branches', () => {
     })).not.toThrow();
   });
 
+  it('sends request when connected with mock connection', async () => {
+    const anyMcp = mcpUnity as any;
+    const mockSend = jest.fn();
+    anyMcp.connection = {
+      isConnected: true,
+      isConnecting: false,
+      send: mockSend,
+      getStats: () => ({ isConnected: true, state: ConnectionState.Connected })
+    };
+
+    const requestPromise = mcpUnity.sendRequest({ method: 'get_bounds', params: { objectPath: 'Cube' } });
+    expect(mockSend).toHaveBeenCalledWith(expect.stringContaining('get_bounds'));
+
+    // Resolve the request
+    const requestId = Array.from(anyMcp.pendingRequests.keys())[0] as string;
+    anyMcp.handleMessage(JSON.stringify({ jsonrpc: '2.0', id: requestId, result: { success: true } }));
+
+    const res = await requestPromise;
+    expect(res).toEqual({ success: true });
+  });
+
+  it('replays in-flight read-only requests upon reconnect', () => {
+    const anyMcp = mcpUnity as any;
+    const mockSend = jest.fn();
+    anyMcp.connection = {
+      isConnected: true,
+      send: mockSend
+    };
+
+    const resolve = jest.fn();
+    const reject = jest.fn();
+    anyMcp.pendingRequests.set('req-read', {
+      resolve,
+      reject,
+      timeout: setTimeout(() => {}, 10000),
+      request: { id: 'req-read', method: 'get_bounds' }
+    });
+    anyMcp.pendingReplay = [{ id: 'req-read', method: 'get_bounds' }];
+
+    anyMcp.replayInFlightRequests();
+    expect(mockSend).toHaveBeenCalledWith(expect.stringContaining('req-read'));
+  });
+
+  it('triages mutations immediately during reconnect while parking read requests', () => {
+    const anyMcp = mcpUnity as any;
+    const resolveRead = jest.fn();
+    const rejectRead = jest.fn();
+    const resolveMut = jest.fn();
+    const rejectMut = jest.fn();
+
+    anyMcp.pendingRequests.set('req-read-2', {
+      resolve: resolveRead,
+      reject: rejectRead,
+      timeout: setTimeout(() => {}, 10000),
+      request: { id: 'req-read-2', method: 'get_bounds' }
+    });
+    anyMcp.pendingRequests.set('req-mut', {
+      resolve: resolveMut,
+      reject: rejectMut,
+      timeout: setTimeout(() => {}, 10000),
+      request: { id: 'req-mut', method: 'create_prefab' }
+    });
+
+    anyMcp.triageInFlightRequests('socket dropped');
+
+    expect(rejectMut).toHaveBeenCalledWith(expect.objectContaining({
+      type: ErrorType.CONNECTION
+    }));
+    expect(anyMcp.pendingReplay).toEqual(expect.arrayContaining([
+      expect.objectContaining({ method: 'get_bounds' })
+    ]));
+  });
+
+  it('queues requests when disconnected and replaying queue executes them', async () => {
+    const anyMcp = mcpUnity as any;
+    mcpUnity.setQueueingEnabled(true);
+    anyMcp.connection = {
+      isConnected: false,
+      isConnecting: true,
+      connectionState: ConnectionState.Connecting,
+      send: jest.fn(),
+      getStats: () => ({ isConnected: false, state: ConnectionState.Connecting })
+    };
+
+    const queuedPromise = mcpUnity.sendRequest({ method: 'get_bounds', params: { objectPath: 'Cube' } });
+    expect(mcpUnity.queuedCommandCount).toBe(1);
+
+    // Mock connected state and sendRequestInternal
+    anyMcp.connection = {
+      isConnected: true,
+      isConnecting: false,
+      connectionState: ConnectionState.Connected,
+      send: jest.fn(),
+      getStats: () => ({ isConnected: true, state: ConnectionState.Connected })
+    };
+    anyMcp.sendRequestInternal = jest.fn().mockResolvedValue({ success: true });
+
+    await anyMcp.replayQueuedCommands();
+    expect(mcpUnity.queuedCommandCount).toBe(0);
+    await expect(queuedPromise).resolves.toEqual({ success: true });
+  });
+
   it('handles stop cleanly', async () => {
     await expect(mcpUnity.stop()).resolves.toBeUndefined();
   });

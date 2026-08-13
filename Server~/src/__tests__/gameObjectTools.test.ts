@@ -64,6 +64,20 @@ describe('GameObject and Component Tools', () => {
       const res = await handler({ objectPath: 'Cube' });
       expect(res.content[0].text).toContain('Deleted object');
     });
+
+    it('validates parameters and handles failure for delete_gameobject', async () => {
+      registerDeleteGameObjectTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'delete_gameobject')![3] as (params: any) => Promise<any>;
+
+      await expect(handler({})).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+
+      mockSendRequest.mockResolvedValue({ success: false });
+      await expect(handler({ objectPath: 'Missing' })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+    });
   });
 
   describe('reparent_gameobject', () => {
@@ -75,6 +89,20 @@ describe('GameObject and Component Tools', () => {
       const res = await handler({ objectPath: 'Child', parentObjectPath: 'Parent' });
       expect(res.content[0].text).toContain('Reparented object');
     });
+
+    it('validates parameters and handles failure for reparent_gameobject', async () => {
+      registerReparentGameObjectTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'reparent_gameobject')![3] as (params: any) => Promise<any>;
+
+      await expect(handler({})).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+
+      mockSendRequest.mockResolvedValue({ success: false });
+      await expect(handler({ objectPath: 'Child' })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+    });
   });
 
   describe('set_sibling_index', () => {
@@ -85,6 +113,20 @@ describe('GameObject and Component Tools', () => {
 
       const res = await handler({ objectPath: 'Child', siblingIndex: 0 });
       expect(res.content[0].text).toContain('Set sibling index');
+    });
+
+    it('validates parameters and handles failure for set_sibling_index', async () => {
+      registerSetSiblingIndexTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'set_sibling_index')![3] as (params: any) => Promise<any>;
+
+      await expect(handler({})).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+
+      mockSendRequest.mockResolvedValue({ success: false });
+      await expect(handler({ objectPath: 'Child', siblingIndex: 1 })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
     });
   });
 
@@ -106,6 +148,16 @@ describe('GameObject and Component Tools', () => {
       const res = await handler({ idOrName: 'Player' });
       expect(res.content[0].text).toContain('Player');
     });
+
+    it('handles failure for get_gameobject', async () => {
+      registerGetGameObjectTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'get_gameobject')![3] as (params: any) => Promise<any>;
+      mockSendRequest.mockResolvedValue({ success: false });
+
+      await expect(handler({ idOrName: 'Missing' })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+    });
   });
 
   describe('update_gameobject', () => {
@@ -124,6 +176,15 @@ describe('GameObject and Component Tools', () => {
 
       await expect(handler({})).rejects.toMatchObject({
         type: ErrorType.VALIDATION
+      });
+    });
+    it('handles failure for update_gameobject', async () => {
+      registerUpdateGameObjectTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'update_gameobject')![3] as (params: any) => Promise<any>;
+      mockSendRequest.mockResolvedValue({ success: false });
+
+      await expect(handler({ objectPath: 'Player', isStatic: true })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
       });
     });
   });
@@ -146,6 +207,16 @@ describe('GameObject and Component Tools', () => {
         type: ErrorType.VALIDATION
       });
     });
+
+    it('handles failure for update_component', async () => {
+      registerUpdateComponentTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'update_component')![3] as (params: any) => Promise<any>;
+      mockSendRequest.mockResolvedValue({ success: false });
+
+      await expect(handler({ objectPath: 'Player', componentName: 'BoxCollider', propertyValues: { isTrigger: true } })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+    });
   });
 
   describe('select_gameobject', () => {
@@ -166,6 +237,16 @@ describe('GameObject and Component Tools', () => {
         type: ErrorType.VALIDATION
       });
     });
+
+    it('handles failure for select_gameobject', async () => {
+      registerSelectGameObjectTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'select_gameobject')![3] as (params: any) => Promise<any>;
+      mockSendRequest.mockResolvedValue({ success: false });
+
+      await expect(handler({ objectName: 'Missing' })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+    });
   });
 
   describe('create_prefab', () => {
@@ -177,6 +258,16 @@ describe('GameObject and Component Tools', () => {
       const res = await handler({ prefabName: 'MyPrefab', savePath: 'Assets/Prefabs/MyPrefab.prefab' });
       expect(res.content[0].text).toContain('Created prefab');
     });
+
+    it('handles failure for create_prefab', async () => {
+      registerCreatePrefabTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'create_prefab')![3] as (params: any) => Promise<any>;
+      mockSendRequest.mockResolvedValue({ success: false });
+
+      await expect(handler({ prefabName: 'MyPrefab' })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+    });
   });
 
   describe('add_asset_to_scene', () => {
@@ -187,6 +278,16 @@ describe('GameObject and Component Tools', () => {
 
       const res = await handler({ assetPath: 'Assets/Prefabs/MyPrefab.prefab' });
       expect(res.content[0].text).toContain('Added asset to scene');
+    });
+
+    it('handles failure for add_asset_to_scene', async () => {
+      registerAddAssetToSceneTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'add_asset_to_scene')![3] as (params: any) => Promise<any>;
+      mockSendRequest.mockResolvedValue({ success: false });
+
+      await expect(handler({ assetPath: 'Assets/Missing.prefab' })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
     });
   });
 });

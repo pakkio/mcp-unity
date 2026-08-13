@@ -203,6 +203,100 @@ describe('UnityConnection', () => {
       expect(connection.isConnecting).toBe(true);
     });
   });
+
+  describe('WebSocket Event Handlers and Messages', () => {
+    it('handles onmessage, onerror, and onclose events from socket', async () => {
+      const connectPromise = connection.connect();
+      const socket = mockWebSocketInstances[0];
+      socket.onopen();
+      await connectPromise;
+
+      expect(connection.isConnected).toBe(true);
+
+      // onmessage
+      const messageSpy = jest.fn();
+      connection.on('message', messageSpy);
+      socket.onmessage({ data: '{"jsonrpc":"2.0","result":{}}' });
+      expect(messageSpy).toHaveBeenCalledWith('{"jsonrpc":"2.0","result":{}}');
+
+      // send
+      connection.send('test payload');
+      expect(socket.send).toHaveBeenCalledWith('test payload');
+
+      // onerror
+      const errorSpy = jest.fn();
+      connection.on('error', errorSpy);
+      socket.onerror(new Error('Socket fail'));
+      expect(errorSpy).toHaveBeenCalled();
+
+      // onclose
+      socket.onclose({ code: 1006, reason: 'Abnormal closure' });
+      expect(connection.connectionState).toBe(ConnectionState.Reconnecting);
+    });
+
+    it('throws error when send is called while not connected', () => {
+      expect(() => connection.send('data')).toThrow(expect.objectContaining({
+        type: ErrorType.CONNECTION
+      }));
+    });
+
+    it('handles PlayMode close code and max reconnection limits', async () => {
+      const conn = new UnityConnection(testLogger, {
+        host: 'localhost',
+        port: 8090,
+        requestTimeout: 5000,
+        maxReconnectAttempts: 1,
+        minReconnectDelay: 50,
+        maxReconnectDelay: 100
+      });
+      conn.on('error', () => {});
+
+      const connectPromise = conn.connect();
+      const socket = mockWebSocketInstances[mockWebSocketInstances.length - 1];
+      socket.onopen();
+      await connectPromise;
+
+      // Simulate Play mode close code (4001)
+      socket.onclose({ code: 4001, reason: 'Play mode enter' });
+      expect((conn as any).isPlayModeReconnect).toBe(true);
+
+      // Now test max reconnection attempts limit
+      (conn as any).isPlayModeReconnect = false;
+      (conn as any).reconnectAttempt = 1;
+      (conn as any).handleConnectionFailure(new McpUnityError(ErrorType.CONNECTION, 'Fail'));
+      expect(conn.connectionState).toBe(ConnectionState.Disconnected);
+
+      conn.disconnect();
+    });
+
+    it('handles pong events and provides connection stats', async () => {
+      const conn = new UnityConnection(testLogger, {
+        host: 'localhost',
+        port: 8090,
+        requestTimeout: 5000,
+        heartbeatInterval: 1000
+      });
+      conn.on('error', () => {});
+
+      const connectPromise = conn.connect();
+      const socket = mockWebSocketInstances[mockWebSocketInstances.length - 1];
+      socket.onopen();
+      await connectPromise;
+
+      // Trigger pong listener
+      const pongCallback = socket.on.mock.calls.find((c: any[]) => c[0] === 'pong')?.[1];
+      if (pongCallback) {
+        pongCallback();
+      }
+
+      const stats = conn.getStats();
+      expect(conn.isConnected).toBe(true);
+      expect(stats.state).toBe(ConnectionState.Connected);
+      expect(typeof conn.timeSinceLastPong).toBe('number');
+
+      conn.disconnect();
+    });
+  });
 });
 
 describe('ConnectionState Enum', () => {

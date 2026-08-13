@@ -432,5 +432,16 @@ describe('Material Tools', () => {
       expect(result.structuredContent.materialName).toBe('TestMaterial');
       expect(result.structuredContent.shaderName).toBe('Standard');
     });
+
+    it('should throw error when Unity execution fails', async () => {
+      mockSendRequest.mockResolvedValue({
+        success: false,
+        message: 'Material not found'
+      });
+
+      await expect(handler({ materialPath: 'Assets/Missing.mat' })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+    });
   });
 });

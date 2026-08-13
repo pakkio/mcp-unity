@@ -68,6 +68,16 @@ describe('Execution and General Tools', () => {
       const res = await handler({ menuItemPath: 'Assets/Refresh' });
       expect(res.content[0].text).toContain('Executed menu item');
     });
+
+    it('throws error when execute_menu_item fails in Unity', async () => {
+      registerMenuItemTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'execute_menu_item')![3] as (params: any) => Promise<any>;
+      mockSendRequest.mockResolvedValue({ success: false });
+
+      await expect(handler({ menuItemPath: 'Assets/Invalid' })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+    });
   });
 
   describe('send_console_log', () => {
@@ -79,6 +89,16 @@ describe('Execution and General Tools', () => {
       const res = await handler({ message: 'Hello', logType: 'Log' });
       expect(res.content[0].text).toContain('Sent log');
     });
+
+    it('throws error when send_console_log fails in Unity', async () => {
+      registerSendConsoleLogTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'send_console_log')![3] as (params: any) => Promise<any>;
+      mockSendRequest.mockResolvedValue({ success: false });
+
+      await expect(handler({ message: 'Hello', logType: 'Log' })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+    });
   });
 
   describe('recompile_scripts', () => {
@@ -89,6 +109,16 @@ describe('Execution and General Tools', () => {
 
       const res = await handler({});
       expect(res.content[0].text).toContain('Recompiled scripts');
+    });
+
+    it('throws error when recompile_scripts fails in Unity', async () => {
+      registerRecompileScriptsTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'recompile_scripts')![3] as (params: any) => Promise<any>;
+      mockSendRequest.mockResolvedValue({ success: false });
+
+      await expect(handler({})).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
     });
   });
 
@@ -139,8 +169,30 @@ describe('Execution and General Tools', () => {
       const handler = mockServerTool.mock.calls.find(call => call[0] === 'add_package')![3] as (params: any) => Promise<any>;
       mockSendRequest.mockResolvedValue({ success: true, message: 'Package added' });
 
-      const res = await handler({ packageIdentifier: 'com.unity.test-framework' });
+      const res = await handler({ source: 'registry', packageName: 'com.unity.test-framework' });
       expect(res.content[0].text).toContain('Package added');
+    });
+
+    it('validates source parameters and failure in add_package', async () => {
+      registerAddPackageTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'add_package')![3] as (params: any) => Promise<any>;
+
+      await expect(handler({ source: 'registry' })).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+
+      await expect(handler({ source: 'github' })).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+
+      await expect(handler({ source: 'disk' })).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+
+      mockSendRequest.mockResolvedValue({ success: false });
+      await expect(handler({ source: 'registry', packageName: 'com.unity.test' })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
     });
   });
 });
