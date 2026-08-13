@@ -140,8 +140,9 @@ If no valid setting is found, Node falls back to:
 - `create_scene` — Create and save new scenes
 - `load_scene` — Load scenes (single or additive)
 - `delete_scene` — Delete scenes and remove from Build Settings
-- `save_scene` — Save current scene (with optional Save As)
+- `save_scene` — Save current scene (with optional Save As or saveAllModified, auto-saves untitled scenes)
 - `get_scene_info` — Get active scene info and loaded scenes list
+- `get_editor_state` — Get editor status, modal dialogs, open windows, and unsaved changes
 - `get_play_mode_status` — Get Unity play mode status (isPlaying, isPaused)
 - `set_play_mode_status` — Control Unity play mode (play, pause, stop, step)
 - `unload_scene` — Unload scene from hierarchy

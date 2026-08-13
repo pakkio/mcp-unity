@@ -810,6 +810,10 @@ namespace McpUnity.Unity
             GetSceneInfoTool getSceneInfoTool = new GetSceneInfoTool();
             _tools.Add(getSceneInfoTool.Name, getSceneInfoTool);
 
+            // Register GetEditorStateTool
+            GetEditorStateTool getEditorStateTool = new GetEditorStateTool();
+            _tools.Add(getEditorStateTool.Name, getEditorStateTool);
+
             // Register GetPlayModeStatusTool
             GetPlayModeStatusTool getPlayModeStatusTool = new GetPlayModeStatusTool();
             _tools.Add(getPlayModeStatusTool.Name, getPlayModeStatusTool);

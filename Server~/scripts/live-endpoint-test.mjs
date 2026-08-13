@@ -212,6 +212,7 @@ async function main() {
 // ---------------------------------------------------------------------------
 async function runReadOnlyGroup(client) {
   await step('get_scene_info', () => callTool(client, 'get_scene_info'));
+  await step('get_editor_state', () => callTool(client, 'get_editor_state'));
   await step('get_scenes_hierarchy', () => callTool(client, 'get_scenes_hierarchy'));
   await step('get_play_mode_status', () => callTool(client, 'get_play_mode_status'));
   await step('get_console_logs', () => callTool(client, 'get_console_logs', { limit: 5 }));
