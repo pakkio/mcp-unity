@@ -60,6 +60,12 @@ function record(name, status, detail, ms) {
 
 async function step(name, fn) {
   covered.add(name);
+  // Printed before the call, on its own line, not just on completion - the pass/fail line
+  // alone gives no signal about which step a hang is currently stuck in until it eventually
+  // resolves (or never does). This is run non-interactively (piped to a file/tail), so a `\r`
+  // progress overwrite is invisible until a later real newline flushes it - a plain logged
+  // line is what actually shows up promptly when tailing captured output during a hang.
+  console.log(`… ${name}`);
   const start = Date.now();
   try {
     await fn();
@@ -93,6 +99,31 @@ async function callTool(client, name, args = {}, options) {
 async function callToolExpectingEither(client, name, args = {}) {
   const result = await client.callTool({ name, arguments: args });
   return { ok: !result.isError, result };
+}
+
+/**
+ * Like callTool, but retries once if the failure is specifically the bridge's
+ * "connection dropped while in flight" rejection - the one case where a blind retry is safe
+ * here, since it fires only when Unity's own reconnect logic refused to resend a mutating
+ * call rather than risk double-applying it (see mcpUnity.ts triageInFlightRequests). The
+ * caller is responsible for only using this on a tool call it knows is idempotent; this test
+ * suite only calls it for 'Assets/Refresh', which just re-scans for on-disk changes.
+ *
+ * The drop happens when a call lands while a *preceding* call's domain reload (e.g.
+ * recompile_scripts) is still settling the WebSocket connection - a real race, not a bug, but
+ * one this suite hits reliably by calling execute_menu_item immediately after recompile_scripts.
+ */
+async function callToolRetryOnConnectionDrop(client, name, args = {}, options) {
+  try {
+    return await callTool(client, name, args, options);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!message.includes('Connection to Unity dropped')) {
+      throw err;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    return await callTool(client, name, args, options);
+  }
 }
 
 async function readResource(client, uri) {
@@ -458,8 +489,12 @@ async function runMutatingGroup(client) {
 
   // Assets/Refresh is idempotent and side-effect-free (just re-scans for on-disk changes),
   // unlike almost every other menu path, which is why it's the one used throughout this
-  // suite's own manual verification history too.
-  await step('execute_menu_item', () => callTool(client, 'execute_menu_item', { menuPath: 'Assets/Refresh' }));
+  // suite's own manual verification history too - and why it's safe to retry here (see
+  // callToolRetryOnConnectionDrop) if it lands while recompile_scripts' domain reload above
+  // is still settling the connection.
+  await step('execute_menu_item', () =>
+    callToolRetryOnConnectionDrop(client, 'execute_menu_item', { menuPath: 'Assets/Refresh' })
+  );
 }
 
 async function cleanupFixtures(client) {
