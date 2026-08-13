@@ -224,10 +224,10 @@ async function runReadOnlyGroup(client) {
   );
   await step('run_tests', () =>
     // The MCP SDK client's own default request timeout (60s) is shorter than Unity's
-    // TestRunnerService wait (300s, matching Node's TOOL_TIMEOUTS_MS.run_tests) - without this
+    // TestRunnerService wait (600s, matching Node's TOOL_TIMEOUTS_MS.run_tests) - without this
     // override the client would abandon the call and move on while the real test run keeps
     // executing in Unity's background, exactly the race this project hit once already.
-    callTool(client, 'run_tests', { testMode: 'EditMode', returnOnlyFailures: true }, { timeout: 310000 })
+    callTool(client, 'run_tests', { testMode: 'EditMode', returnOnlyFailures: true }, { timeout: 610000 })
   );
   await step('send_console_log', () =>
     callTool(client, 'send_console_log', { message: 'mcp_livetest: send_console_log check', type: 'info' })
@@ -251,8 +251,61 @@ async function runReadOnlyGroup(client) {
 let fixturesCreated = false;
 let createdPrefabPath = null;
 
+async function cleanResidualFixtures(client) {
+  try {
+    const res = await callTool(client, 'get_scenes_hierarchy');
+    let hierarchy = res.structuredContent?.hierarchy;
+    if (!hierarchy) {
+      const text = textOf(res);
+      if (text) {
+        try {
+          hierarchy = JSON.parse(text);
+        } catch { }
+      }
+    }
+    if (hierarchy && !Array.isArray(hierarchy) && Array.isArray(hierarchy.hierarchy)) {
+      hierarchy = hierarchy.hierarchy;
+    }
+    const idsToDelete = [];
+
+    function traverse(node) {
+      if (!node) return;
+      if (typeof node.name === 'string' && (node.name === SCRATCH.root || node.name === SCRATCH.dup || node.name.startsWith('mcp_livetest_'))) {
+        if (node.instanceId != null) {
+          idsToDelete.push(node.instanceId);
+        }
+      }
+      if (Array.isArray(node.children)) {
+        for (const child of node.children) traverse(child);
+      }
+      if (Array.isArray(node.rootObjects)) {
+        for (const root of node.rootObjects) traverse(root);
+      }
+    }
+
+    if (Array.isArray(hierarchy)) {
+      for (const scene of hierarchy) {
+        traverse(scene);
+      }
+    }
+
+    for (const instanceId of idsToDelete) {
+      try {
+        await callTool(client, 'delete_gameobject', { instanceId });
+      } catch { }
+    }
+
+    try {
+      await callTool(client, 'delete_asset', { assetPath: SCRATCH.folder });
+    } catch { }
+  } catch { }
+}
+
 async function setupFixtures(client) {
   try {
+    // Clean up any leftover fixtures from previously aborted runs first
+    await cleanResidualFixtures(client);
+
     // update_gameobject creates a fresh, minimal GameObject at objectPath if none exists there -
     // this avoids depending on (or mutating) anything already in the target project's scene.
     await callTool(client, 'update_gameobject', {
@@ -498,28 +551,16 @@ async function runMutatingGroup(client) {
 }
 
 async function cleanupFixtures(client) {
-  if (!fixturesCreated) {
-    console.log('  (nothing to clean up - fixture setup never completed)');
-    return;
-  }
-  // Best-effort: log failures but do not throw, so one cleanup failure doesn't hide the others.
   covered.add('delete_gameobject');
-  const cleanups = [
-    ['delete_gameobject', { objectPath: SCRATCH.dup }],
-    ['delete_gameobject', { objectPath: SCRATCH.root }],
-    ['delete_asset', { assetPath: SCRATCH.folder }],
-  ];
-  // create_prefab has no folder parameter, so it lands outside the shared scratch folder
-  // above and needs its own explicit cleanup entry.
+  // Clean up all residual test GameObjects and folders
+  await cleanResidualFixtures(client);
+
   if (createdPrefabPath) {
-    cleanups.push(['delete_asset', { assetPath: createdPrefabPath }]);
-  }
-  for (const [tool, args] of cleanups) {
     try {
-      await callTool(client, tool, args);
-      console.log(`  cleaned up: ${tool}(${JSON.stringify(args)})`);
+      await callTool(client, 'delete_asset', { assetPath: createdPrefabPath });
+      console.log(`  cleaned up: delete_asset(${JSON.stringify({ assetPath: createdPrefabPath })})`);
     } catch (err) {
-      console.error(`  cleanup failed: ${tool}(${JSON.stringify(args)}) - ${err instanceof Error ? err.message : err}`);
+      console.error(`  cleanup failed: delete_asset(${JSON.stringify({ assetPath: createdPrefabPath })}) - ${err instanceof Error ? err.message : err}`);
     }
   }
 }

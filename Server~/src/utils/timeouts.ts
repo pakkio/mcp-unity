@@ -11,7 +11,7 @@ export const TOOL_TIMEOUTS_MS: Record<string, number> = {
   build_project: 1800000,      // BuildPipeline.BuildPlayer blocks the main thread for the whole
                                // build; a cold player build on a large project routinely exceeds
                                // 10 minutes, and IL2CPP/Android targets more still
-  run_tests: 300000,           // Full suites can run for several minutes
+  run_tests: 600000,           // Full suites can run for several minutes
   recompile_scripts: 60000,    // Domain reload + compilation
   set_play_mode_status: 30000, // 'play'/'stop' trigger a domain reload that drops the socket mid-response
   capture_screenshot: 30000,   // Large scene view / high maxWidth encoding
