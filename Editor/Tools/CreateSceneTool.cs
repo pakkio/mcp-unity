@@ -68,7 +68,14 @@ namespace McpUnity.Tools
 
             try
             {
-                var newScene = UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.DefaultGameObjects, UnityEditor.SceneManagement.NewSceneMode.Single);
+                // NewSceneMode.Single unconditionally replaces every currently loaded scene, so
+                // it can only be used when the caller actually asked for that (makeActive: true).
+                // Creating Additive instead when makeActive is false leaves whatever the caller
+                // already had open untouched - the new scene is closed again below once it has
+                // been saved, since the caller asked for it to be created, not left open.
+                var newScene = UnityEditor.SceneManagement.EditorSceneManager.NewScene(
+                    UnityEditor.SceneManagement.NewSceneSetup.DefaultGameObjects,
+                    makeActive ? UnityEditor.SceneManagement.NewSceneMode.Single : UnityEditor.SceneManagement.NewSceneMode.Additive);
 
                 bool saved = UnityEditor.SceneManagement.EditorSceneManager.SaveScene(newScene, scenePath);
                 if (!saved)
@@ -81,16 +88,18 @@ namespace McpUnity.Tools
 
                 AssetDatabase.Refresh();
 
-                // Make the scene active if requested
-                if (makeActive)
-                {
-                    UnityEditor.SceneManagement.EditorSceneManager.OpenScene(scenePath, UnityEditor.SceneManagement.OpenSceneMode.Single);
-                }
-
                 // Optionally add to build settings
                 if (addToBuildSettings)
                 {
                     AddSceneToBuildSettings(scenePath);
+                }
+
+                // makeActive: false means "create and save it, don't open it" - close the
+                // additively-loaded scene now that it's on disk, unless it's the only scene left
+                // loaded (EditorSceneManager refuses to close the last remaining open scene).
+                if (!makeActive && UnityEditor.SceneManagement.EditorSceneManager.loadedSceneCount > 1)
+                {
+                    UnityEditor.SceneManagement.EditorSceneManager.CloseScene(newScene, true);
                 }
 
                 McpLogger.LogInfo($"Created scene '{sceneName}' at path '{scenePath}'");
