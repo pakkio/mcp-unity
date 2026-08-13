@@ -175,7 +175,7 @@ namespace McpUnity.Unity
                 }
                 catch (Exception ex)
                 {
-                    McpLogger.LogWarning($"Error closing WebSocket connection: {ex.Message}");
+                    McpLogger.LogInfo($"Error closing WebSocket connection: {ex.Message}");
                 }
             }
         }
@@ -242,7 +242,7 @@ namespace McpUnity.Unity
                     }
                     catch (Exception ex)
                     {
-                        McpLogger.LogWarning($"Error closing unauthenticated connection: {ex.Message}");
+                        McpLogger.LogInfo($"Error closing unauthenticated connection: {ex.Message}");
                     }
                     return;
                 }
@@ -360,7 +360,7 @@ namespace McpUnity.Unity
             }
             catch (Exception ex)
             {
-                McpLogger.LogWarning($"Error closing untracked WebSocket connection: {ex.Message}");
+                McpLogger.LogInfo($"Error closing untracked WebSocket connection: {ex.Message}");
             }
         }
 

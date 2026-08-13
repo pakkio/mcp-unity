@@ -90,7 +90,7 @@ namespace McpUnity.Unity
             }
             catch (Exception ex)
             {
-                McpLogger.LogWarning($"Error stopping TcpListener: {ex.Message}");
+                McpLogger.LogInfo($"Error stopping TcpListener: {ex.Message}");
             }
 
             CloseAllClients(1001, "Server stopping");
@@ -108,7 +108,7 @@ namespace McpUnity.Unity
                 }
                 catch (Exception ex)
                 {
-                    McpLogger.LogWarning($"Error closing connection {handler.ID}: {ex.Message}");
+                    McpLogger.LogInfo($"Error closing connection {handler.ID}: {ex.Message}");
                 }
             }
             _connections.Clear();
@@ -252,7 +252,18 @@ namespace McpUnity.Unity
                                 }
                                 catch (WebSocketException ex)
                                 {
-                                    McpLogger.LogWarning($"WebSocket receive error: {ex.Message}");
+                                    if (ex.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely ||
+                                        ex.WebSocketErrorCode == WebSocketError.Success ||
+                                        ex.WebSocketErrorCode == WebSocketError.InvalidState ||
+                                        ex.InnerException is SocketException ||
+                                        ex.Message.IndexOf("close handshake", StringComparison.OrdinalIgnoreCase) >= 0)
+                                    {
+                                        McpLogger.LogInfo($"WebSocket client disconnected: {ex.Message}");
+                                    }
+                                    else
+                                    {
+                                        McpLogger.LogWarning($"WebSocket receive error: {ex.Message}");
+                                    }
                                     break;
                                 }
                                 catch (Exception ex)
