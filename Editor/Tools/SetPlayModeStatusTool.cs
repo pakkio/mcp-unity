@@ -161,23 +161,22 @@ namespace McpUnity.Tools
 
                 if (transitionPending)
                 {
-                    EditorApplication.delayCall += () =>
-                    {
-                        deferredTransition();
-
-                        // Surface a vetoed transition in the Unity console at least - the client's
-                        // response has long since been sent by this point.
-                        bool expectedPlaying = isPlaying;
-                        EditorApplication.delayCall += () =>
-                        {
-                            if (EditorApplication.isPlaying != expectedPlaying)
-                            {
-                                McpLogger.LogWarning(
-                                    $"Play mode action '{action}' did not take effect: expected isPlaying={expectedPlaying}, " +
-                                    $"actual isPlaying={EditorApplication.isPlaying}. The transition was likely blocked by the Editor.");
-                            }
-                        };
-                    };
+                    // EditorApplication.delayCall is NOT reliable here: it is a plain static
+                    // delegate, and per McpMainThreadDispatcher's own doc comment (see
+                    // McpUnitySocketHandler.cs) it is not reliably drained while the Editor is
+                    // idle/unfocused in the background - exactly the state this Editor is in when
+                    // driven purely through MCP tool calls with no human interacting with the
+                    // window. McpUnityServer.ScheduleStartServer hit the same issue and pairs
+                    // delayCall with an EditorApplication.update subscription for that reason.
+                    // A self-removing EditorApplication.update handler is used here instead:
+                    // update keeps firing regardless of focus, and standard multicast-delegate
+                    // invocation semantics guarantee a handler added via "+=" during the current
+                    // tick's invocation is not included in that same invocation - so this still
+                    // genuinely defers to a later tick rather than running before this response
+                    // has been sent.
+                    bool expectedPlaying = isPlaying;
+                    string capturedAction = action;
+                    ApplyDeferredTransition(deferredTransition, expectedPlaying, capturedAction);
                 }
 
                 return result;
@@ -189,6 +188,36 @@ namespace McpUnity.Tools
                     "play_mode_error"
                 );
             }
+        }
+
+        /// <summary>
+        /// Runs <paramref name="deferredTransition"/> on the next EditorApplication.update tick
+        /// (not delayCall - see the caller for why), then a tick after that, logs a warning if
+        /// the transition did not take effect (e.g. vetoed by another playModeStateChanged
+        /// handler in the project).
+        /// </summary>
+        private static void ApplyDeferredTransition(Action deferredTransition, bool expectedPlaying, string action)
+        {
+            EditorApplication.CallbackFunction apply = null;
+            apply = () =>
+            {
+                EditorApplication.update -= apply;
+                deferredTransition();
+
+                EditorApplication.CallbackFunction verify = null;
+                verify = () =>
+                {
+                    EditorApplication.update -= verify;
+                    if (EditorApplication.isPlaying != expectedPlaying)
+                    {
+                        McpLogger.LogWarning(
+                            $"Play mode action '{action}' did not take effect: expected isPlaying={expectedPlaying}, " +
+                            $"actual isPlaying={EditorApplication.isPlaying}. The transition was likely blocked by the Editor.");
+                    }
+                };
+                EditorApplication.update += verify;
+            };
+            EditorApplication.update += apply;
         }
     }
 }
