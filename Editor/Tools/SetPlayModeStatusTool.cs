@@ -75,7 +75,11 @@ namespace McpUnity.Tools
                             // observed as "Connection failed" or a timeout despite the action
                             // succeeding. Deferring the assignment to the next editor tick lets
                             // the response for THIS request finish sending first.
-                            deferredTransition = () => EditorApplication.isPlaying = true;
+                            deferredTransition = () =>
+                            {
+                                SceneSaveHelper.EnsureAllScenesSavedSilently();
+                                EditorApplication.isPlaying = true;
+                            };
                             isPlaying = true;
                             isPaused = false;
                         }

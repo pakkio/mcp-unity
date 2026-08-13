@@ -48,6 +48,9 @@ namespace McpUnity.Tools
 
             McpLogger.LogInfo($"Executing RunTestsTool: Mode={testMode}, Filter={testFilter ?? "(none)"}");
 
+            // Ensure open scenes are saved silently so test runner does not trigger modal prompts
+            SceneSaveHelper.EnsureAllScenesSavedSilently();
+
             // Call the service to run tests
             JObject result = await _testRunnerService.ExecuteTestsAsync(testMode, returnOnlyFailures, returnWithLogs, testFilter);
             tcs.SetResult(result);

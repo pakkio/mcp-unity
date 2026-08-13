@@ -75,10 +75,10 @@ namespace McpUnity.Tools
 
             try
             {
-                // Avoid any save prompts: save open scenes before replacing them (non-additive)
+                // Avoid any save prompts: save open scenes silently before replacing them (non-additive)
                 if (!additive)
                 {
-                    UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
+                    SceneSaveHelper.EnsureAllScenesSavedSilently();
                 }
 
                 var mode = additive

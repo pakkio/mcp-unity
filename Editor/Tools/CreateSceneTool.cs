@@ -68,6 +68,10 @@ namespace McpUnity.Tools
 
             try
             {
+                // Ensure all existing scenes are saved cleanly before creating a new scene
+                // to prevent Unity from popping up a modal Save dialog on untitled scenes.
+                SceneSaveHelper.EnsureAllScenesSavedSilently();
+
                 // NewSceneMode.Single unconditionally replaces every currently loaded scene, so
                 // it can only be used when the caller actually asked for that (makeActive: true).
                 // Creating Additive instead when makeActive is false leaves whatever the caller
