@@ -153,8 +153,8 @@ namespace McpUnity.Unity
                     string requestPath = "";
                     string secWebSocketKey = null;
 
-                    byte[] headerBuffer = new byte[HeaderReadBufferSize];
-                    string firstLine = await ReadLineAsync(stream, headerBuffer, ct);
+                    var lineReader = new BufferedLineReader(stream, HeaderReadBufferSize);
+                    string firstLine = await lineReader.ReadLineAsync(ct);
                     if (string.IsNullOrEmpty(firstLine)) return;
 
                     var requestParts = firstLine.Split(' ');
@@ -166,7 +166,7 @@ namespace McpUnity.Unity
                     // Read remaining headers
                     while (true)
                     {
-                        string line = await ReadLineAsync(stream, headerBuffer, ct);
+                        string line = await lineReader.ReadLineAsync(ct);
                         if (string.IsNullOrEmpty(line)) break; // End of headers
 
                         int colonIdx = line.IndexOf(':');
@@ -220,8 +220,12 @@ namespace McpUnity.Unity
                     byte[] handshakeBytes = Encoding.UTF8.GetBytes(responseBuilder.ToString());
                     await stream.WriteAsync(handshakeBytes, 0, handshakeBytes.Length, ct);
 
-                    // 4. Upgrade stream to WebSocket
-                    using (WebSocket webSocket = WebSocket.CreateFromStream(stream, isServer: true, subProtocol: null, keepAliveInterval: TimeSpan.FromSeconds(30)))
+                    // 4. Upgrade stream to WebSocket. lineReader may have buffered bytes past the
+                    // blank line terminating the headers (e.g. the client's first WS frame arriving
+                    // in the same TCP segment as the handshake) - replay those before the raw stream
+                    // so they aren't silently dropped.
+                    Stream wsStream = lineReader.WrapRemainder(stream);
+                    using (WebSocket webSocket = WebSocket.CreateFromStream(wsStream, isServer: true, subProtocol: null, keepAliveInterval: TimeSpan.FromSeconds(30)))
                     {
                         string id = Guid.NewGuid().ToString();
                         var handler = new McpUnitySocketHandler(_server, _connectionGeneration, id, webSocket, headers);
@@ -301,37 +305,140 @@ namespace McpUnity.Unity
         }
 
         /// <summary>
-        /// Reads a single CRLF-terminated HTTP header line, buffering into <paramref name="buffer"/>
-        /// instead of reading one byte at a time. Lines longer than <see cref="MaxHeaderLineLength"/>
-        /// throw to avoid unbounded header growth from a malicious peer.
+        /// Reads CRLF-terminated HTTP header lines off a stream, buffering reads into a chunk
+        /// instead of one byte at a time. Unlike a stateless per-call read, this keeps whatever a
+        /// chunk read past the end of the current line in an internal carry-over buffer instead of
+        /// discarding it - a single client write (the common case: the whole handshake request
+        /// arrives in one TCP segment) can contain every header line, and dropping the bytes after
+        /// the first '\n' left every later ReadLineAsync call blocked on a read that would never
+        /// arrive, since the client was done writing and waiting on a response.
         /// </summary>
-        private static async Task<string> ReadLineAsync(Stream stream, byte[] buffer, CancellationToken ct)
+        private sealed class BufferedLineReader
         {
-            var line = new List<byte>(128);
-            while (!ct.IsCancellationRequested)
-            {
-                int read = await stream.ReadAsync(buffer, 0, buffer.Length, ct);
-                if (read == 0) break;
+            private readonly Stream _stream;
+            private readonly byte[] _buffer;
+            private int _bufferOffset;
+            private int _bufferLength;
 
-                for (int i = 0; i < read; i++)
+            public BufferedLineReader(Stream stream, int bufferSize)
+            {
+                _stream = stream;
+                _buffer = new byte[bufferSize];
+            }
+
+            public async Task<string> ReadLineAsync(CancellationToken ct)
+            {
+                var line = new List<byte>(128);
+                while (true)
                 {
-                    byte val = buffer[i];
-                    if (val == '\n')
+                    if (_bufferOffset >= _bufferLength)
                     {
-                        return Encoding.UTF8.GetString(line.ToArray());
+                        _bufferLength = await _stream.ReadAsync(_buffer, 0, _buffer.Length, ct);
+                        _bufferOffset = 0;
+                        if (_bufferLength == 0)
+                        {
+                            return Encoding.UTF8.GetString(line.ToArray());
+                        }
                     }
 
-                    if (val != '\r')
+                    while (_bufferOffset < _bufferLength)
                     {
-                        line.Add(val);
-                        if (line.Count > MaxHeaderLineLength)
+                        byte val = _buffer[_bufferOffset++];
+                        if (val == '\n')
                         {
-                            throw new InvalidDataException("HTTP header line exceeds maximum allowed length");
+                            return Encoding.UTF8.GetString(line.ToArray());
+                        }
+
+                        if (val != '\r')
+                        {
+                            line.Add(val);
+                            if (line.Count > MaxHeaderLineLength)
+                            {
+                                throw new InvalidDataException("HTTP header line exceeds maximum allowed length");
+                            }
                         }
                     }
                 }
             }
-            return Encoding.UTF8.GetString(line.ToArray());
+
+            /// <summary>
+            /// Wraps <paramref name="stream"/> so any bytes already pulled into this reader's
+            /// internal buffer past the last line consumed are replayed first, then reads fall
+            /// through to <paramref name="stream"/> as normal. Returns <paramref name="stream"/>
+            /// unchanged when nothing was left over.
+            /// </summary>
+            public Stream WrapRemainder(Stream stream)
+            {
+                if (_bufferOffset >= _bufferLength)
+                {
+                    return stream;
+                }
+
+                int count = _bufferLength - _bufferOffset;
+                byte[] remainder = new byte[count];
+                Array.Copy(_buffer, _bufferOffset, remainder, 0, count);
+                _bufferOffset = _bufferLength;
+                return new PrefixedStream(stream, remainder);
+            }
+        }
+
+        /// <summary>
+        /// A read-through stream that yields a fixed prefix of already-buffered bytes before
+        /// falling through to the inner stream. Used to hand a WebSocket layer bytes that were
+        /// over-read while parsing the HTTP handshake off the same connection.
+        /// </summary>
+        private sealed class PrefixedStream : Stream
+        {
+            private readonly Stream _inner;
+            private byte[] _prefix;
+            private int _prefixOffset;
+
+            public PrefixedStream(Stream inner, byte[] prefix)
+            {
+                _inner = inner;
+                _prefix = prefix;
+            }
+
+            public override bool CanRead => true;
+            public override bool CanWrite => _inner.CanWrite;
+            public override bool CanSeek => false;
+            public override long Length => throw new NotSupportedException();
+            public override long Position
+            {
+                get => throw new NotSupportedException();
+                set => throw new NotSupportedException();
+            }
+
+            public override int Read(byte[] buffer, int offset, int count) =>
+                ReadAsync(buffer, offset, count, CancellationToken.None).GetAwaiter().GetResult();
+
+            public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            {
+                if (_prefix != null)
+                {
+                    int n = Math.Min(count, _prefix.Length - _prefixOffset);
+                    Array.Copy(_prefix, _prefixOffset, buffer, offset, n);
+                    _prefixOffset += n;
+                    if (_prefixOffset >= _prefix.Length)
+                    {
+                        _prefix = null;
+                    }
+                    return n;
+                }
+
+                return await _inner.ReadAsync(buffer, offset, count, cancellationToken);
+            }
+
+            public override void Write(byte[] buffer, int offset, int count) =>
+                _inner.Write(buffer, offset, count);
+
+            public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+                _inner.WriteAsync(buffer, offset, count, cancellationToken);
+
+            public override void Flush() => _inner.Flush();
+
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+            public override void SetLength(long value) => throw new NotSupportedException();
         }
     }
 }
