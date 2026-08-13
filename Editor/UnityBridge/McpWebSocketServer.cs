@@ -26,6 +26,9 @@ namespace McpUnity.Unity
         private readonly McpUnityServer _server;
         private readonly int _connectionGeneration;
 
+        private const int HeaderReadBufferSize = 256;
+        private const int MaxHeaderLineLength = 16 * 1024;
+
         private TcpListener _listener;
         private CancellationTokenSource _cts;
         private bool _isListening;
@@ -150,7 +153,8 @@ namespace McpUnity.Unity
                     string requestPath = "";
                     string secWebSocketKey = null;
 
-                    string firstLine = await ReadLineAsync(stream, ct);
+                    byte[] headerBuffer = new byte[HeaderReadBufferSize];
+                    string firstLine = await ReadLineAsync(stream, headerBuffer, ct);
                     if (string.IsNullOrEmpty(firstLine)) return;
 
                     var requestParts = firstLine.Split(' ');
@@ -162,7 +166,7 @@ namespace McpUnity.Unity
                     // Read remaining headers
                     while (true)
                     {
-                        string line = await ReadLineAsync(stream, ct);
+                        string line = await ReadLineAsync(stream, headerBuffer, ct);
                         if (string.IsNullOrEmpty(line)) break; // End of headers
 
                         int colonIdx = line.IndexOf(':');
@@ -228,45 +232,65 @@ namespace McpUnity.Unity
 
                         // Receive loop
                         byte[] buffer = new byte[8192];
-                        var messageBuilder = new StringBuilder();
-
-                        while (webSocket.State == WebSocketState.Open && !ct.IsCancellationRequested)
+                        using (var messageBuffer = new MemoryStream())
                         {
-                            WebSocketReceiveResult result;
-                            try
+                            while (webSocket.State == WebSocketState.Open && !ct.IsCancellationRequested)
                             {
-                                var segment = new ArraySegment<byte>(buffer);
-                                result = await webSocket.ReceiveAsync(segment, ct);
-                            }
-                            catch (Exception)
-                            {
-                                break;
-                            }
-
-                            if (result.MessageType == WebSocketMessageType.Close)
-                            {
+                                WebSocketReceiveResult result;
                                 try
                                 {
-                                    await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closed by peer", CancellationToken.None);
+                                    result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), ct);
                                 }
-                                catch { }
-                                break;
-                            }
+                                catch (OperationCanceledException)
+                                {
+                                    // Server stopping or receive cancelled.
+                                    break;
+                                }
+                                catch (WebSocketException ex)
+                                {
+                                    McpLogger.LogWarning($"WebSocket receive error: {ex.Message}");
+                                    break;
+                                }
+                                catch (Exception ex)
+                                {
+                                    McpLogger.LogError($"Unexpected WebSocket receive error: {ex.Message}");
+                                    break;
+                                }
 
-                            if (result.MessageType == WebSocketMessageType.Text)
-                            {
-                                messageBuilder.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
+                                if (result.MessageType == WebSocketMessageType.Close)
+                                {
+                                    try
+                                    {
+                                        await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closed by peer", CancellationToken.None);
+                                    }
+                                    catch { }
+                                    break;
+                                }
+
+                                if (result.MessageType == WebSocketMessageType.Binary)
+                                {
+                                    // MCP traffic uses text frames; discard any accumulated
+                                    // fragments from a prior message and skip binary payloads.
+                                    messageBuffer.SetLength(0);
+                                    continue;
+                                }
+
+                                if (result.Count > 0)
+                                {
+                                    messageBuffer.Write(buffer, 0, result.Count);
+                                }
+
                                 if (result.EndOfMessage)
                                 {
-                                    string messageText = messageBuilder.ToString();
-                                    messageBuilder.Clear();
+                                    string messageText = Encoding.UTF8.GetString(messageBuffer.GetBuffer(), 0, (int)messageBuffer.Length);
+                                    messageBuffer.SetLength(0);
                                     handler.OnMessage(messageText);
                                 }
                             }
-                        }
 
-                        handler.OnClose();
-                        _connections.TryRemove(id, out _);
+                            handler.OnClose();
+                            _connections.TryRemove(id, out _);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -276,19 +300,38 @@ namespace McpUnity.Unity
             }
         }
 
-        private static async Task<string> ReadLineAsync(Stream stream, CancellationToken ct)
+        /// <summary>
+        /// Reads a single CRLF-terminated HTTP header line, buffering into <paramref name="buffer"/>
+        /// instead of reading one byte at a time. Lines longer than <see cref="MaxHeaderLineLength"/>
+        /// throw to avoid unbounded header growth from a malicious peer.
+        /// </summary>
+        private static async Task<string> ReadLineAsync(Stream stream, byte[] buffer, CancellationToken ct)
         {
-            var bytes = new List<byte>();
-            byte[] oneByte = new byte[1];
+            var line = new List<byte>(128);
             while (!ct.IsCancellationRequested)
             {
-                int read = await stream.ReadAsync(oneByte, 0, 1, ct);
+                int read = await stream.ReadAsync(buffer, 0, buffer.Length, ct);
                 if (read == 0) break;
-                byte val = oneByte[0];
-                if (val == '\n') break;
-                if (val != '\r') bytes.Add(val);
+
+                for (int i = 0; i < read; i++)
+                {
+                    byte val = buffer[i];
+                    if (val == '\n')
+                    {
+                        return Encoding.UTF8.GetString(line.ToArray());
+                    }
+
+                    if (val != '\r')
+                    {
+                        line.Add(val);
+                        if (line.Count > MaxHeaderLineLength)
+                        {
+                            throw new InvalidDataException("HTTP header line exceeds maximum allowed length");
+                        }
+                    }
+                }
             }
-            return Encoding.UTF8.GetString(bytes.ToArray());
+            return Encoding.UTF8.GetString(line.ToArray());
         }
     }
 }
