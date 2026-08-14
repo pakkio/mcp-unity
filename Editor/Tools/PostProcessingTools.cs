@@ -178,27 +178,44 @@ namespace McpUnity.Tools
                 return McpUnitySocketHandler.CreateErrorResponse($"Post-processing effect type '{effectType}' not found in current render pipeline assemblies.", "component_type_not_found");
             }
 
-            VolumeComponent comp = null;
-            foreach (var item in profile.components)
+            ScriptableObject comp = null;
+            var componentsList = GetProfileComponents(profile);
+            if (componentsList != null)
             {
-                if (item != null && item.GetType() == componentType)
+                foreach (var item in componentsList)
                 {
-                    comp = item;
-                    break;
+                    if (item != null && item.GetType() == componentType)
+                    {
+                        comp = item as ScriptableObject;
+                        break;
+                    }
                 }
             }
 
             if (comp == null)
             {
-                comp = profile.Add(componentType, true);
+                MethodInfo addMethod = typeof(VolumeProfile).GetMethod("Add", new[] { typeof(Type), typeof(bool) });
+                if (addMethod != null)
+                {
+                    comp = addMethod.Invoke(profile, new object[] { componentType, true }) as ScriptableObject;
+                }
+                else
+                {
+                    comp = ScriptableObject.CreateInstance(componentType);
+                    AssetDatabase.AddObjectToAsset(comp, profile);
+                }
             }
 
-            comp.active = true;
-
-            // Apply settings via reflection on VolumeParameter properties
-            if (settings != null)
+            if (comp != null)
             {
-                ApplyComponentSettings(comp, settings);
+                PropertyInfo activeProp = comp.GetType().GetProperty("active");
+                if (activeProp != null) activeProp.SetValue(comp, true);
+
+                // Apply settings via reflection on VolumeParameter properties
+                if (settings != null)
+                {
+                    ApplyComponentSettings(comp, settings);
+                }
             }
 
             EditorUtility.SetDirty(profile);
@@ -246,14 +263,20 @@ namespace McpUnity.Tools
             }
 
             JArray effectsArray = new JArray();
-            foreach (var comp in profile.components)
+            var componentsList = GetProfileComponents(profile);
+            if (componentsList != null)
             {
-                if (comp == null) continue;
-                effectsArray.Add(new JObject
+                foreach (var comp in componentsList)
                 {
-                    ["name"] = comp.GetType().Name,
-                    ["active"] = comp.active
-                });
+                    if (comp == null) continue;
+                    PropertyInfo activeProp = comp.GetType().GetProperty("active");
+                    bool isActive = activeProp != null ? (bool)(activeProp.GetValue(comp) ?? true) : true;
+                    effectsArray.Add(new JObject
+                    {
+                        ["name"] = comp.GetType().Name,
+                        ["active"] = isActive
+                    });
+                }
             }
 
             return new JObject
@@ -265,6 +288,35 @@ namespace McpUnity.Tools
                 ["overrideCount"] = effectsArray.Count,
                 ["overrides"] = effectsArray
             };
+        }
+
+        private static bool IsVolumeComponentType(Type t)
+        {
+            if (t == null) return false;
+            Type cur = t;
+            while (cur != null && cur != typeof(object))
+            {
+                if (cur.Name == "VolumeComponent" || cur.FullName == "UnityEngine.Rendering.VolumeComponent")
+                    return true;
+                cur = cur.BaseType;
+            }
+            return false;
+        }
+
+        private static System.Collections.IEnumerable GetProfileComponents(VolumeProfile profile)
+        {
+            if (profile == null) return null;
+            PropertyInfo prop = typeof(VolumeProfile).GetProperty("components");
+            if (prop != null)
+            {
+                return prop.GetValue(profile) as System.Collections.IEnumerable;
+            }
+            FieldInfo field = typeof(VolumeProfile).GetField("components");
+            if (field != null)
+            {
+                return field.GetValue(profile) as System.Collections.IEnumerable;
+            }
+            return null;
         }
 
         private Type ResolveVolumeComponentType(string effectType)
@@ -318,7 +370,7 @@ namespace McpUnity.Tools
                         try
                         {
                             Type t = assembly.GetType(name);
-                            if (t != null && typeof(VolumeComponent).IsAssignableFrom(t)) return t;
+                            if (t != null && IsVolumeComponentType(t)) return t;
                         }
                         catch { }
                     }
@@ -328,8 +380,9 @@ namespace McpUnity.Tools
             return null;
         }
 
-        private void ApplyComponentSettings(VolumeComponent comp, JObject settings)
+        private void ApplyComponentSettings(object comp, JObject settings)
         {
+            if (comp == null || settings == null) return;
             Type compType = comp.GetType();
             FieldInfo[] fields = compType.GetFields(BindingFlags.Public | BindingFlags.Instance);
 
