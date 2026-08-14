@@ -145,7 +145,67 @@ The following tools are available for manipulating and querying Unity scenes and
 - `get_material_info`: Gets detailed information about a material including shader and all properties
   > **Example prompt:** "Show me all the properties of the 'PlayerMaterial'"
 
-- `batch_execute`: Executes multiple tool operations in a single batch request, reducing round-trips and enabling atomic operations with optional rollback on failure
+- `apply_prefab_overrides`: Applies modifications from a scene prefab instance back to its source Prefab Asset
+  > **Example prompt:** "Apply all component overrides from the 'Player' instance back to its Prefab Asset"
+
+- `revert_prefab_overrides`: Reverts property and component overrides on a scene prefab instance back to prefab asset defaults
+  > **Example prompt:** "Revert overrides on the 'Enemy_Boss' prefab instance"
+
+- `unpack_prefab`: Unpacks a prefab instance in the scene into regular GameObjects
+  > **Example prompt:** "Completely unpack the 'Building_Complex' prefab instance"
+
+- `manage_tags_and_layers`: Manages Tags, Physics Layers (0-31), Sorting Layers, the Physics Collision Matrix, and recursive layer assignment
+  > **Example prompt:** "Add a physics layer named 'Enemy', set it on the 'Goblin' hierarchy, and disable collisions between 'Enemy' and 'EnemyProjectile'"
+
+- `create_scriptable_object`: Dynamically instantiates and saves a `.asset` file from any compiled ScriptableObject class with serialized fields
+  > **Example prompt:** "Create an ItemData ScriptableObject at 'Assets/Data/Sword.asset' with itemName 'Excalibur' and damage 50"
+
+- `set_rect_transform`: Sets RectTransform UI layout properties (anchor presets like `stretch_all` or `top_left`, anchoredPosition, sizeDelta, pivot, offsets)
+  > **Example prompt:** "Set the HealthBar RectTransform to top_left anchor with size (200, 40) and position (20, -20)"
+
+- `manage_terrain`: Creates, sculpts (Perlin noise hills/mountains, flatten, smooth), textures, and populates Unity Terrains and trees
+  > **Example prompt:** "Create a 500x500 terrain and sculpt rolling hills with Perlin noise at scale 0.02 and height 30m"
+
+- `probuilder_create_shape`: Parametrically generates 3D ProBuilder greyboxing shapes (cube, stair, cylinder, arch, prism, pipe, door, cone, torus, sphere)
+  > **Example prompt:** "Create a ProBuilder curved stair with 12 steps and width 3m"
+
+- `probuilder_mesh_op`: Performs ProBuilder mesh operations (subdivide, export to asset, strip ProBuilder scripts)
+  > **Example prompt:** "Export the ProBuilder greybox building to an asset at 'Assets/Meshes/Building.asset'"
+
+- `manage_lighting`: Manages environment/ambient illumination, skybox material assignment, and asynchronous lightmap baking
+  > **Example prompt:** "Set ambient mode to Trilight with sky color blue and bake lightmaps"
+
+- `configure_light_probe_group`: Generates an automated 3D grid layout of Light Probes across a volume
+  > **Example prompt:** "Create a light probe grid over the room volume (size 20x5x20) with 2m spacing"
+
+- `create_reflection_probe`: Creates and configures Reflection Probes with box projection and resolution settings
+  > **Example prompt:** "Add a reflection probe at the center of the cathedral with resolution 512 and box projection"
+
+- `manage_occlusion_culling`: Manages Occlusion Culling baking, clearing, static flags (Occluder/Occludee), Occlusion Areas, and Portals
+  > **Example prompt:** "Mark all buildings as OccluderStatic and start baking occlusion culling"
+
+- `configure_lod_group`: Configures Level of Detail (LODGroup) with screen height transition thresholds and renderer slots
+  > **Example prompt:** "Setup a LODGroup on the 'PineTree' GameObject with LOD0 at 60%, LOD1 at 30%, and LOD2 at 10%"
+
+- `configure_camera_culling`: Configures Camera frustum FOV, orthographic mode, per-layer draw distances (`layerCullDistances`), and tests in-frustum visibility
+  > **Example prompt:** "Set SmallProps layer to cull at 30m on Main Camera and check if the TreasureChest is inside the camera frustum"
+
+- `configure_colliders`: Configures MeshColliders (convex hull, trigger, custom meshes), generates colliders across hierarchies, and creates PhysicMaterials
+  > **Example prompt:** "Generate box colliders across all child meshes of the 'DungeonRoom' and create a Bouncy PhysicMaterial"
+
+- `configure_texture_settings`: Configures texture asset import settings (Normal Map, Sprite, Max Size, sRGB, Read/Write, filter and wrap modes)
+  > **Example prompt:** "Configure 'Assets/Textures/Rock_Normal.png' as NormalMap with max size 2048 and linear sRGB=false"
+
+- `manage_navmesh`: Manages AI Navigation (bakes/clears NavMesh, configures NavMeshAgents and NavMeshObstacles, queries pathfinding routes)
+  > **Example prompt:** "Bake the scene NavMesh, add a NavMeshAgent with speed 5 on the Goblin, and calculate the path to the Player"
+
+- `configure_post_processing`: Creates and configures Post-Processing Volumes and Volume Profiles (Bloom, ACES Tonemapping, Vignette, Color Adjustments, DOF)
+  > **Example prompt:** "Create a Global Post Processing Volume with ACES tonemapping, Bloom intensity 1.2, and a slight Vignette"
+
+- `create_virtual_camera`: Creates and configures Cinemachine Virtual Camera rigs (Follow, LookAt, 3rd Person, First Person POV, Orbit)
+  > **Example prompt:** "Create a 3rd person Cinemachine Virtual Camera following the Player with follow offset (0, 2, -4)"
+
+- `execute_batch`: Executes multiple tool operations in a single synchronous Unity frame, eliminating round-trip latency
   > **Example prompt:** "Create 10 empty GameObjects named Enemy_1 through Enemy_10 in a single batch operation"
 
 ### MCP App tools

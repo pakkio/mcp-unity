@@ -34,6 +34,19 @@ import { registerCreateMaterialTool, registerAssignMaterialTool, registerModifyM
 import { registerDuplicateGameObjectTool, registerDeleteGameObjectTool, registerReparentGameObjectTool, registerSetSiblingIndexTool } from './tools/gameObjectTools.js';
 import { registerCaptureScreenshotTool } from './tools/captureScreenshotTool.js';
 import { registerGetBoundsTool, registerPlaceNextToTool, registerFindLocalAssetsTool, registerImportLocalFileTool, registerMeasureDistanceTool, registerGetFloorHeightTool, registerGetNearbyObjectsTool, registerFrameCameraOnTool } from './tools/spatialTools.js';
+import { registerApplyPrefabOverridesTool, registerRevertPrefabOverridesTool, registerUnpackPrefabTool } from './tools/prefabTools.js';
+import { registerManageTagsAndLayersTool } from './tools/tagsAndLayersTools.js';
+import { registerCreateScriptableObjectTool } from './tools/scriptableObjectTools.js';
+import { registerSetRectTransformTool } from './tools/rectTransformTools.js';
+import { registerManageTerrainTool } from './tools/terrainTools.js';
+import { registerProBuilderCreateShapeTool, registerProBuilderMeshOpTool } from './tools/probuilderTools.js';
+import { registerManageLightingTool, registerConfigureLightProbeGroupTool, registerCreateReflectionProbeTool } from './tools/lightingTools.js';
+import { registerManageOcclusionCullingTool, registerConfigureLODGroupTool, registerConfigureCameraCullingTool } from './tools/cullingTools.js';
+import { registerConfigureCollidersTool } from './tools/colliderTools.js';
+import { registerConfigureTextureSettingsTool } from './tools/textureTools.js';
+import { registerManageNavMeshTool } from './tools/navmeshTools.js';
+import { registerConfigurePostProcessingTool } from './tools/postProcessingTools.js';
+import { registerCreateVirtualCameraTool } from './tools/cinemachineTools.js';
 import { registerBatchExecuteTool } from './tools/batchExecuteTool.js';
 import { registerShowUnityDashboardTool } from './tools/showUnityDashboardTool.js';
 import { registerGetScenesHierarchyTool } from './tools/getScenesHierarchyTool.js';
@@ -121,6 +134,46 @@ registerCreateMaterialTool(server, mcpUnity, toolLogger);
 registerAssignMaterialTool(server, mcpUnity, toolLogger);
 registerModifyMaterialTool(server, mcpUnity, toolLogger);
 registerGetMaterialInfoTool(server, mcpUnity, toolLogger);
+
+// Register Prefab Tools
+registerApplyPrefabOverridesTool(server, mcpUnity, toolLogger);
+registerRevertPrefabOverridesTool(server, mcpUnity, toolLogger);
+registerUnpackPrefabTool(server, mcpUnity, toolLogger);
+
+// Register Tags & Layers Tools
+registerManageTagsAndLayersTool(server, mcpUnity, toolLogger);
+
+// Register ScriptableObject Tools
+registerCreateScriptableObjectTool(server, mcpUnity, toolLogger);
+
+// Register RectTransform Tools
+registerSetRectTransformTool(server, mcpUnity, toolLogger);
+
+// Register Terrain Tools
+registerManageTerrainTool(server, mcpUnity, toolLogger);
+
+// Register ProBuilder Tools
+registerProBuilderCreateShapeTool(server, mcpUnity, toolLogger);
+registerProBuilderMeshOpTool(server, mcpUnity, toolLogger);
+
+// Register Lighting Tools
+registerManageLightingTool(server, mcpUnity, toolLogger);
+registerConfigureLightProbeGroupTool(server, mcpUnity, toolLogger);
+registerCreateReflectionProbeTool(server, mcpUnity, toolLogger);
+
+// Register Culling & Optimization Tools
+registerManageOcclusionCullingTool(server, mcpUnity, toolLogger);
+registerConfigureLODGroupTool(server, mcpUnity, toolLogger);
+registerConfigureCameraCullingTool(server, mcpUnity, toolLogger);
+
+// Register Collider and Texture Tools
+registerConfigureCollidersTool(server, mcpUnity, toolLogger);
+registerConfigureTextureSettingsTool(server, mcpUnity, toolLogger);
+
+// Register AI Navigation, Post-Processing, and Cinemachine Tools
+registerManageNavMeshTool(server, mcpUnity, toolLogger);
+registerConfigurePostProcessingTool(server, mcpUnity, toolLogger);
+registerCreateVirtualCameraTool(server, mcpUnity, toolLogger);
 
 // Register Batch Execute Tool (high-priority for performance)
 registerBatchExecuteTool(server, mcpUnity, toolLogger);

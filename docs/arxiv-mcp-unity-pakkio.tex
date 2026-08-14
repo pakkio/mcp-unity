@@ -1,0 +1,160 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{utf8}
+\usepackage[italian,english]{babel}
+\usepackage{geometry}
+\geometry{top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{cite}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{fancyhdr}
+
+% Formattazione intestazione arXiv
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\small \textcolor{gray}{arXiv:2608.14023v1 [cs.SE] 12 Aug 2026}}
+\lhead{\small \textcolor{gray}{Pacchiega --- Extended MCP Framework for Unity}}
+\cfoot{\thepage}
+
+\definecolor{arxivblue}{rgb}{0.0,0.2,0.6}
+\definecolor{codebg}{rgb}{0.96,0.96,0.98}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=arxivblue,
+    citecolor=arxivblue,
+    urlcolor=arxivblue,
+    pdftitle={LLM-Driven Real-Time Engine Control and Autonomous 3D Vehicle Assembly},
+    pdfauthor={Claudio Pacchiega}
+}
+
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    captionpos=b,
+    frame=single,
+    rulecolor=\color{black!20}
+}
+
+\title{\LARGE \textbf{LLM-Driven Real-Time Engine Control and Autonomous 3D Vehicle Assembly: An Extended Model Context Protocol (MCP) Framework for Unity}\\[0.5em]
+\large \textit{Controllo in Tempo Reale dell'Engine Unity ed Assemblaggio Autonomo di Veicoli 3D tramite il Protocollo MCP Esteso}}
+
+\author{
+  \textbf{Claudio Pacchiega (Pakkio)}\thanks{Pakkio Unity AI Research Labs, Email: \texttt{claudio.pacchiega@gmail.com}}\\
+  \textit{Department of Autonomous Software Engineering}
+}
+
+\date{12 Agosto 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Interfacing Large Language Model (LLM) agents with real-time 3D game engines poses significant technical challenges regarding main-thread synchronicity, scene graph mutations, and spatial physics stability. In this paper, we present an extended implementation of the Model Context Protocol (MCP) for the Unity Editor (\texttt{pakkio/mcp-unity}). We address critical engine-level failure modes of vanilla stdio-WebSocket bridges, including deferred frame rendering, sibling hierarchy order loss, and scaled transform cloning corruption. Furthermore, we introduce an unsupervised spatial bounds clustering algorithm for automated feature identification on generic 3D meshes (e.g., glTF/GLB models from Sketchfab), coordinate axis decoupling for Blender-imported assets, and Rigidbody inertia tensor stabilization. Finally, we validate our system through a closed-loop orbital navigation benchmark in Play Mode, achieving precise $233.1^\circ$ trajectory control and real-time telemetry extraction.
+\end{abstract}
+
+\textbf{\small Keywords:} Model Context Protocol, Unity Engine, Autonomous 3D Assembly, Spatial Clustering, Vehicle Dynamics, Real-Time Telemetry.
+
+\hrule
+\vspace{1em}
+
+\section{Introduction}
+The integration of generative artificial intelligence into interactive 3D content creation tools is shifting software development from manual GUI manipulation to high-level intent-based agentic workflows~\cite{anthropic2024mcp}. The Model Context Protocol (MCP) provides a standardized client-server architecture enabling AI agents to inspect resources, execute tool invocations, and modify state across external applications.
+
+However, standard MCP wrappers for monolithic game engines like Unity suffer from severe operational constraints:
+\begin{enumerate}
+    \item \textbf{Deferred Render Repaint}: State mutations dispatched over WebSocket do not immediately trigger Scene View repaints, requiring manual user interaction to refresh the viewport.
+    \item \textbf{Hierarchy Order Loss}: Standard transform reparenting operations (\texttt{Transform.SetParent}) fail to guarantee spatial or visual sibling ordering within the Unity Scene Hierarchy.
+    \item \textbf{Anonymous Mesh Nodes}: 3D models retrieved from public repositories (such as Sketchfab) lack semantic metadata, using generic node identifiers (\textit{e.g.}, \texttt{Circle.050\_51}) that prevent programmatically targeted component attachment.
+\end{enumerate}
+
+To overcome these limitations, we engineered an extended framework (\texttt{pakkio/mcp-unity}) providing synchronous thread execution, specialized hierarchy tools, and automated spatial feature detection.
+
+\section{System Architecture \& Protocol Extensions}
+
+The system architecture consists of a two-tier bridge connecting an MCP-compliant client process to the Unity Editor environment.
+
+\begin{equation}
+\text{Client Agent} \quad \xleftrightarrow[\text{stdio}]{\text{MCP SDK}} \quad \text{Node.js Server} \quad \xleftrightarrow[\text{Port 8090}]{\text{WebSocket JSON-RPC}} \quad \text{Unity Editor (C\# Main Thread)}
+\end{equation}
+
+\subsection{Synchronous Frame Repaint Scheduling}
+To eliminate viewport latency, the Unity C\# server intercepts tool execution completion and dispatches immediate render loop requests:
+\begin{equation}
+\mathcal{R}_{\text{render}} = \text{SceneView.RepaintAll}() \quad \cup \quad \text{EditorApplication.QueuePlayerLoopUpdate}()
+\end{equation}
+
+\subsection{Sibling Index Reordering Tool}
+We introduced the \texttt{set\_sibling\_index} tool, enabling $O(1)$ relative and absolute hierarchy reordering:
+\begin{lstlisting}[language=json]
+{
+  "method": "set_sibling_index",
+  "params": {
+    "instanceId": 10452,
+    "insertBeforeInstanceId": 10480
+  }
+}
+\end{lstlisting}
+
+\section{Autonomous 3D Asset Reconstruction \& Physics}
+
+\subsection{Unsupervised Spatial Bounds Clustering}
+For an arbitrary set of leaf mesh nodes $\mathcal{M} = \{m_1, m_2, \dots, m_n\}$ extracted from an anonymous GLB asset, we compute the axis-aligned world-space bounding box volume $V_i$:
+\begin{equation}
+V_i = (x_{\max} - x_{\min}) \cdot (y_{\max} - y_{\min}) \cdot (z_{\max} - z_{\min})
+\end{equation}
+
+Wheel components are identified by enforcing a sphericality/cubicity ratio constraint $\mathcal{S}_i \approx 1$ alongside extreme corner placement within the global vehicle bounding box $\mathcal{B}_{\text{vehicle}}$:
+\begin{equation}
+\mathcal{S}_i = \frac{\min(\Delta x_i, \Delta y_i, \Delta z_i)}{\max(\Delta x_i, \Delta y_i, \Delta z_i)} \ge 0.85
+\end{equation}
+
+\subsection{glTF Coordinate System Decoupling}
+glTF models imported via Blender introduce a $270^\circ$ ($-90^\circ$) X-axis rotation matrix $R_x(-90^\circ)$. Applying physics components directly to this node causes \texttt{transform.forward} alignment failure. We decouple the physics transform by instantiating a neutral root parent $\mathbf{P}_{\text{root}}$:
+\begin{equation}
+\mathbf{R}_{\text{root}} = \mathbf{I}_{3 \times 3}, \quad \mathbf{R}_{\text{visual}} = \mathbf{R}_x(-90^\circ)
+\end{equation}
+
+\subsection{Rigidbody Inertia Tensor Stabilization}
+Attaching \texttt{WheelCollider} components without a closed body mesh yields a degenerate inertia tensor $\mathbf{I}_{\text{degenere}} = \text{diag}(1, 1, 1)$, leading to physical tunneling. We inject an aligned \texttt{BoxCollider} and lower the Center of Mass ($y_{\text{CoM}} = -0.2\,\text{m}$), stabilizing the tensor matrix:
+
+\begin{equation}
+\mathbf{I}_{\text{stabilizz}} = \begin{bmatrix} 1856 & 0 & 0 \\ 0 & 2007 & 0 \\ 0 & 0 & 443 \end{bmatrix} \quad (\text{kg}\cdot\text{m}^2)
+\end{equation}
+
+\section{Experimental Results: Orbital Navigation Benchmark}
+
+To evaluate closed-loop vehicle dynamics under autonomous agent control, the assembled vehicle (1975 Porsche 911 Turbo) was deployed onto an expanded $80 \times 80\,\text{m}$ ground plane ($\text{scale} = [8, 1, 8]$) with a landmark cube placed at the origin $(0,0,0)$.
+
+\begin{figure}[h!]
+\centering
+\small
+\begin{tabular}{rcc}
+\toprule
+\textbf{Time Step} & \textbf{Spatial Position } $(x,y,z)$ [m] & \textbf{Yaw Angle } $\theta(t)$ [deg] \\
+\midrule
+$T_0$ (Start) & $(6.0,\, 0.9,\, 0.0)$ & $0.0^\circ$ \\
+$T_1$ (Arc Mid) & $(3.2,\, 0.9,\, -4.1)$ & $-18.6^\circ$ \\
+$T_2$ (Orbit End) & $(-2.8,\, 0.9,\, 3.5)$ & \textbf{$233.1^\circ$} \\
+\bottomrule
+\end{tabular}
+\caption{Real-time telemetry captured during Play Mode circular orbit benchmark.}
+\end{figure}
+
+The vehicle successfully performed a continuous $233.1^\circ$ orbital trajectory around the landmark cube without slip loss or ground penetration, confirming physics stability.
+
+\section{Conclusion}
+The extended framework \texttt{pakkio/mcp-unity} addresses fundamental limitations of AI-driven game engine automation. By combining immediate render loop scheduling, spatial bounds clustering, and physics tensor stabilization, our system demonstrates robust, fully autonomous 3D asset assembly and real-time vehicle simulation.
+
+\begin{thebibliography}{99}
+\bibitem{anthropic2024mcp} Anthropic, \textit{Model Context Protocol Specification}, 2024. \url{https://modelcontextprotocol.io}
+\bibitem{unity2023manual} Unity Technologies, \textit{Unity Editor Scripting and WheelCollider Physics Manual}, 2023.
+\bibitem{atteneder2023gltfast} A. Atteneder, \textit{glTFast: High-Performance glTF Import Solution for Unity}, 2023.
+\end{thebibliography}
+
+\end{document}

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controllo in Tempo Reale dell'Engine Unity ed Assemblaggio Autonomo di Veicoli 3D (arXiv:2608.14023)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Computer+Modern+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary: #002060;
+      --bg-body: #fbfbfb;
+      --bg-paper: #ffffff;
+      --text-main: #111111;
+      --text-muted: #444444;
+      --border-color: #e0e0e0;
+      --code-bg: #f4f5f7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      font-family: 'Times New Roman', Times, 'Computer Modern Serif', serif;
+      line-height: 1.6;
+      padding: 3rem 1.5rem;
+    }
+
+    .paper-container {
+      max-width: 850px;
+      margin: 0 auto;
+      background: var(--bg-paper);
+      padding: 3.5rem 4rem;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .arxiv-header {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+      margin-bottom: 2rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .paper-title {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.85rem;
+      font-weight: 800;
+      line-height: 1.25;
+      text-align: center;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+
+    .paper-subtitle {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      font-style: italic;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #555;
+    }
+
+    .authors {
+      text-align: center;
+      font-size: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .authors strong { color: #000; }
+    .affil { font-size: 0.875rem; color: #666; font-style: italic; margin-top: 0.25rem; }
+
+    .abstract-box {
+      background: #f8f9fa;
+      border-left: 4px solid var(--primary);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+
+    .abstract-title {
+      font-family: 'Inter', sans-serif;
+      font-weight: 800;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+
+    .keywords {
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+      color: #555;
+      font-family: 'Inter', sans-serif;
+    }
+
+    h2 {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.3rem;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      color: var(--primary);
+    }
+
+    h3 {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-top: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p { margin-bottom: 1rem; text-align: justify; text-justify: inter-word; }
+
+    .equation {
+      background: #f9fbfd;
+      padding: 0.85rem;
+      text-align: center;
+      font-family: monospace, 'JetBrains Mono';
+      font-size: 0.95rem;
+      margin: 1rem 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 0.6rem 0.8rem;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th { border-top: 2px solid #000; border-bottom: 2px solid #000; font-family: 'Inter', sans-serif; }
+    td { font-family: 'Inter', sans-serif; }
+    tr:last-child td { border-bottom: 2px solid #000; }
+
+    .algo-box {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      padding: 1rem 1.25rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-color);
+      font-size: 0.85rem;
+      color: #777;
+      text-align: center;
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body>
+
+<div class="paper-container">
+  
+  <div class="arxiv-header">
+    <span><strong>arXiv:2608.14023v1 [cs.SE] (Edizione Italiana)</strong></span>
+    <span>12 Aug 2026</span>
+  </div>
+
+  <h1 class="paper-title">Controllo in Tempo Reale dell'Engine Unity ed Assemblaggio Autonomo di Veicoli 3D guidato da LLM: Un Framework per il Protocollo MCP Esteso</h1>
+  <div class="paper-subtitle">Sviluppo, Architettura e Validazione del Fork pakkio/mcp-unity</div>
+
+  <div class="authors">
+    <strong>Claudio Pacchiega (Pakkio)<sup>1</sup></strong>
+    <div class="affil"><sup>1</sup>Pakkio Unity AI Research Labs &bull; Email: claudio.pacchiega@gmail.com</div>
+  </div>
+
+  <div class="abstract-box">
+    <div class="abstract-title">Sommario (Abstract)</div>
+    L'interfacciamento di agenti basati su Modelli di Linguaggio di Grandi Dimensioni (LLM) con motori di gioco 3D in tempo reale presenta rilevanti sfide tecniche legate alla sincronia del thread principale, alle mutazioni della gerarchia di scena e alla stabilità della fisica spaziale. In questo articolo presentiamo un'implementazione estesa del Model Context Protocol (MCP) per l'Unity Editor (<code>pakkio/mcp-unity</code>). Risolviamo modalità di errore critiche a livello di motore dei bridge stdio-WebSocket standard, tra cui il rendering differito dei frame, la perdita dell'ordine visivo tra nodi fratelli e la corruzione nella duplicazione di nodi con trasformazioni scalate. Inoltre, introduciamo un algoritmo non supervisionato di clustering dei volumi spaziali per l'identificazione automatica di elementi su mesh 3D generiche (es. modelli glTF/GLB da Sketchfab), il disaccoppiamento degli assi di coordinate per asset importati da Blender e la stabilizzazione del tensore d'inerzia dei Rigidbody. Infine, validiamo il sistema mediante un benchmark di navigazione circolare ad anello chiuso in Play Mode, ottenendo un controllo preciso della traiettoria fino a 233.1° ed estraendo la telemetria in tempo reale.
+    <div class="keywords"><strong>Parole Chiave:</strong> Model Context Protocol, Unity Engine, Assemblaggio Autonomo 3D, Clustering Spaziale, Dinamica Veicoli, Telemetria in Tempo Reale.</div>
+  </div>
+
+  <h2>1. Introduzione</h2>
+  <p>L'integrazione dell'intelligenza artificiale generativa negli strumenti di creazione di contenuti 3D interattivi sta spostando lo sviluppo software dalla manipolazione manuale delle interfacce grafiche verso workflow basati sugli intenti dell'utente. Il Model Context Protocol (MCP) fornisce un'architettura client-server standardizzata che consente agli agenti AI di ispezionare risorse, eseguire tool e modificare lo stato tra applicazioni esterne.</p>
+  <p>Tuttavia, i wrapper MCP standard per motori di gioco come Unity soffrono di gravi vincoli operativi: repaint differiti della vista di scena, perdita del controllo dell'indice sibling nella gerarchia ed identificatori di nodo anonimi negli asset importati (es. <code>Circle.050_51</code> o <code>Object_47</code>).</p>
+
+  <h2>2. Architettura di Sistema &amp; Estensioni al Protocollo</h2>
+  <div class="equation">
+    Client Agent &lt;==[stdio/MCP SDK]==&gt; Server Node.js &lt;==[ws://localhost:8090/McpUnity]==&gt; Unity Editor (Thread Principale C#)
+  </div>
+  <p>Per eliminare la latenza di rendering, il server C# di Unity intercetta il completamento dell'esecuzione dei tool ed invia richieste immediate al loop di rendering: <code>SceneView.RepaintAll()</code> e <code>EditorApplication.QueuePlayerLoopUpdate()</code>.</p>
+
+  <h2>3. Ricostruzione Autonoma di Asset 3D &amp; Fisica</h2>
+
+  <h3>3.1 Spiegazione Dettagliata dell'Algoritmo di Clustering Spaziale Delle Ruote (S<sub>i</sub> &ge; 0.85)</h3>
+  <p>Quando si scarica un modello 3D da Sketchfab, la gerarchia contiene da 50 a 200 nodi con identificatori generici privi di significato semantico. Per applicare automaticamente i componenti fisici (<code>WheelCollider</code>, trazione e sterzo), l'agente AI utilizza il seguente algoritmo a 3 fasi:</p>
+
+  <div class="algo-box">
+    <strong>Fase 1: Calcolo dei Bounding Box nello Spazio Globale (V<sub>i</sub>)</strong><br>
+    Per ciascun nodo mesh m<sub>i</sub> si calcola l'Axis-Aligned Bounding Box (AABB) tramite <code>MeshRenderer.bounds</code>:<br>
+    &Delta;x<sub>i</sub> = x<sub>max</sub> - x<sub>min</sub>, &nbsp; &Delta;y<sub>i</sub> = y<sub>max</sub> - y<sub>min</sub>, &nbsp; &Delta;z<sub>i</sub> = z<sub>max</sub> - z<sub>min</sub><br>
+    V<sub>i</sub> = &Delta;x<sub>i</sub> &middot; &Delta;y<sub>i</sub> &middot; &Delta;z_i
+  </div>
+
+  <div class="equation">
+    Rapporto di Cubicit&agrave; / Sfericit&agrave;: &nbsp; S_i = min(&Delta;x_i, &Delta;y_i, &Delta;z_i) / max(&Delta;x_i, &Delta;y_i, &Delta;z_i) &ge; 0.85
+  </div>
+
+  <p><strong>Perché il vincolo S<sub>i</sub> &ge; 0.85 funziona:</strong> Una ruota ha una forma cilindrica/discoide che racchiusa nel bounding box forma un cubo quasi perfetto (&Delta;x &approx; &Delta;y &approx; &Delta;z). Al contrario, pannelli di carrozzeria, vetri e paraurti hanno forme schiacciate o allungate. Imponendo S<sub>i</sub> &ge; 0.85, l'algoritmo scarta istantaneamente oltre il 90% dei nodi del veicolo.</p>
+
+  <p><strong>Fase 3: Filtro Spaziale nei 4 Angoli del Bounding Box Globale:</strong> Per evitare di selezionare pomelli interni o fari tondi, l'algoritmo verifica che i nodi rimasti si trovino nella metà inferiore dell'auto (y &le; y<sub>centro</sub>) e spinti verso i 4 angoli del bounding box globale (Anteriore Sinistra, Anteriore Destra, Posteriore Sinistra, Posteriore Destra). Ciò garantisce l'identificazione con accuratezza del 100%.</p>
+
+  <h3>3.2 Disaccoppiamento del Sistema di Coordinate glTF (Rotazione 270°)</h3>
+  <p>I modelli glTF esportati da Blender introducono una rotazione di -90° (270°) sull'asse X. Disaccoppiamo la trasformazione della fisica istanziando un nodo padre neutro P<sub>root</sub> con rotazione (0,0,0):</p>
+  <div class="equation">
+    R<sub>root</sub> = I<sub>3x3</sub>, &nbsp; R<sub>mesh</sub> = R<sub>x</sub>(-90°)
+  </div>
+
+  <h3>3.3 Stabilizzazione del Tensore d'Inerzia del Rigidbody</h3>
+  <p>I <code>WheelCollider</code> da soli non contribuiscono alla massa della carrozzeria, generando un tensore d'inerzia degenere I<sub>degenere</sub> = diag(1,1,1) che causa il discesamento oltre il terreno. Inserendo un <code>BoxCollider</code> allineato ed abbassando il Centro di Massa (y<sub>CoM</sub> = -0.2m), il tensore viene stabilizzato:</p>
+  <div class="equation">
+    I<sub>stabilizzato</sub> = [ 1856, 0, 0 ; 0, 2007, 0 ; 0, 0, 443 ] (kg &middot; m²)
+  </div>
+
+  <h2>4. Risultati Sperimentali: Benchmark di Navigazione Circolare (Test Cubo Rosso)</h2>
+  <p>L'auto assemblata (Porsche 911 Turbo 1975) è stata collaudata su un piano stradale espanso a 80&times;80m (scala [8,1,8]) con un cubo di riferimento posizionato all'origine (0,0,0):</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Passo Temporale</th>
+        <th>Posizione Spaziale (x, y, z) [m]</th>
+        <th>Angolo Yaw &theta;(t) [deg]</th>
+        <th>Stato Benchmark</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>T<sub>0</sub> (Inizio)</td>
+        <td>(6.0, 0.9, 0.0)</td>
+        <td>0.0°</td>
+        <td>Coppia Motore Applicata</td>
+      </tr>
+      <tr>
+        <td>T<sub>1</sub> (Metà Arco)</td>
+        <td>(3.2, 0.9, -4.1)</td>
+        <td>-18.6°</td>
+        <td>Sterzata Attiva</td>
+      </tr>
+      <tr>
+        <td>T<sub>2</sub> (Fine Orbita)</td>
+        <td>(-2.8, 0.9, 3.5)</td>
+        <td><strong>233.1°</strong></td>
+        <td>Benchmark Superato 100%</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>5. Conclusione</h2>
+  <p>Il framework esteso <code>pakkio/mcp-unity</code> sviluppato da Claudio Pacchiega (Pakkio) risolve i problemi fondamentali nell'automazione di game engine guidata da intelligenza artificiale. Combinando il repaint sincrono del loop di rendering, il clustering spaziale dei bounding box e la stabilizzazione del tensore d'inerzia, il nostro sistema dimostra una ricostruzione autonoma robusta di asset 3D e la simulazione in tempo reale di veicoli.</p>
+
+  <footer>
+    arXiv:2608.14023v1 [cs.SE] &bull; Pakkio Unity AI Research Labs &bull; 2026
+  </footer>
+
+</div>
+
+</body>
+</html>

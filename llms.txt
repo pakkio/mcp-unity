@@ -29,6 +29,28 @@ automate scene and asset management, run tests, install packages, and gather dia
 - [`run_tests`](README.md#mcp-server-tools): Runs Unity Test Runner tests (EditMode/PlayMode).
 - [`send_console_log`](README.md#mcp-server-tools): Sends a console message to the Unity Editor log.
 - [`add_asset_to_scene`](README.md#mcp-server-tools): Adds an AssetDatabase asset to the current scene.
+- [`create_prefab`](README.md#mcp-server-tools): Creates prefabs with optional scripts and serialized fields.
+- [`apply_prefab_overrides`](README.md#mcp-server-tools): Applies instance overrides back to source Prefab asset.
+- [`revert_prefab_overrides`](README.md#mcp-server-tools): Reverts instance property/component overrides.
+- [`unpack_prefab`](README.md#mcp-server-tools): Unpacks prefab instance into standard GameObjects.
+- [`manage_tags_and_layers`](README.md#mcp-server-tools): Manages Tags, Physics Layers, Sorting Layers, Collision Matrix, and recursive object layer assignment.
+- [`create_scriptable_object`](README.md#mcp-server-tools): Dynamically instantiates and saves ScriptableObject .asset files.
+- [`set_rect_transform`](README.md#mcp-server-tools): Configures UI RectTransform anchor presets, positions, sizeDelta, and pivots.
+- [`manage_terrain`](README.md#mcp-server-tools): Creates, sculpts (Perlin noise), textures, and populates Unity Terrains.
+- [`probuilder_create_shape`](README.md#mcp-server-tools): Generates 11 3D ProBuilder greyboxing shapes.
+- [`probuilder_mesh_op`](README.md#mcp-server-tools): Performs ProBuilder mesh operations (subdivide, export to asset, strip scripts).
+- [`manage_lighting`](README.md#mcp-server-tools): Manages skybox, ambient lighting, and lightmap baking.
+- [`configure_light_probe_group`](README.md#mcp-server-tools): Generates automated 3D light probe grids.
+- [`create_reflection_probe`](README.md#mcp-server-tools): Creates and configures localized reflection probes.
+- [`manage_occlusion_culling`](README.md#mcp-server-tools): Manages Occlusion Culling baking, static flags, areas, and portals.
+- [`configure_lod_group`](README.md#mcp-server-tools): Configures LODGroup tiers and screen transition heights.
+- [`configure_camera_culling`](README.md#mcp-server-tools): Configures Camera frustum FOV, layer draw distances, and frustum visibility tests.
+- [`configure_colliders`](README.md#mcp-server-tools): Configures MeshColliders (convex hull/triggers), hierarchy colliders, and PhysicMaterials.
+- [`configure_texture_settings`](README.md#mcp-server-tools): Configures TextureImporter settings (Normal Map, Sprite, Max Size, sRGB, Read/Write).
+- [`manage_navmesh`](README.md#mcp-server-tools): Manages AI Navigation (bakes NavMesh, configures NavMeshAgents/Obstacles, queries path routes).
+- [`configure_post_processing`](README.md#mcp-server-tools): Creates/configures Post-Processing Volumes and Volume Profiles (Bloom, ACES Tonemapping, Vignette, DOF).
+- [`create_virtual_camera`](README.md#mcp-server-tools): Creates Cinemachine Virtual Camera rigs (Follow, LookAt, 3rd person, 1st person POV, orbit).
+- [`execute_batch`](README.md#mcp-server-tools): Executes multiple MCP operations synchronously in a single frame.
 
 ## Resources
 - [unity://menu-items](README.md#mcp-server-resources): Returns all available Unity menu items.

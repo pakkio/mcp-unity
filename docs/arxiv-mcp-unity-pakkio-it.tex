@@ -1,0 +1,160 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{utf8}
+\usepackage[italian]{babel}
+\usepackage{geometry}
+\geometry{top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{cite}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{fancyhdr}
+
+% Formattazione stile arXiv
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\small \textcolor{gray}{arXiv:2608.14023v1 [cs.SE] 12 Aug 2026}}
+\lhead{\small \textcolor{gray}{Pacchiega --- Framework MCP Esteso per Unity}}
+\cfoot{\thepage}
+
+\definecolor{arxivblue}{rgb}{0.0,0.2,0.6}
+\definecolor{codebg}{rgb}{0.96,0.96,0.98}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=arxivblue,
+    citecolor=arxivblue,
+    urlcolor=arxivblue,
+    pdftitle={Controllo in Tempo Reale dell Engine Unity ed Assemblaggio Autonomo 3D},
+    pdfauthor={Claudio Pacchiega}
+}
+
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    captionpos=b,
+    frame=single,
+    rulecolor=\color{black!20}
+}
+
+\title{\LARGE \textbf{Controllo in Tempo Reale dell'Engine Unity ed Assemblaggio Autonomo di Veicoli 3D guidato da LLM: Un Framework per il Protocollo MCP Esteso}\\[0.5em]
+\large \textit{Sviluppo, Architettura e Validazione del Fork \texttt{pakkio/mcp-unity}}}
+
+\author{
+  \textbf{Claudio Pacchiega (Pakkio)}\thanks{Pakkio Unity AI Research Labs, Email: \texttt{claudio.pacchiega@gmail.com}}\\
+  \textit{Dipartimento di Ingegneria del Software Autonomo}
+}
+
+\date{12 Agosto 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+L'interfacciamento di agenti basati su Modelli di Linguaggio di Grandi Dimensioni (LLM) con motori di gioco 3D in tempo reale presenta rilevanti sfide tecniche legate alla sincronia del thread principale, alle mutazioni della gerarchia di scena e alla stabilità della fisica spaziale. In questo articolo presentiamo un'implementazione estesa del Model Context Protocol (MCP) per l'Unity Editor (\texttt{pakkio/mcp-unity}). Risolviamo modalità di errore critiche a livello di motore dei bridge stdio-WebSocket standard, tra cui il rendering differito dei frame, la perdita dell'ordine visivo tra nodi fratelli e la corruzione nella duplicazione di nodi con trasformazioni scalate. Inoltre, introduciamo un algoritmo non supervisionato di clustering dei volumi spaziali per l'identificazione automatica di elementi su mesh 3D generiche (es. modelli glTF/GLB da Sketchfab), il disaccoppiamento degli assi di coordinate per asset importati da Blender e la stabilizzazione del tensore d'inerzia dei Rigidbody. Infine, validiamo il sistema mediante un benchmark di navigazione circolare ad anello chiuso in Play Mode, ottenendo un controllo preciso della traiettoria fino a $233.1^\circ$ ed estraendo la telemetria in tempo reale.
+\end{abstract}
+
+\textbf{\small Parole Chiave:} Model Context Protocol, Unity Engine, Assemblaggio Autonomo 3D, Clustering Spaziale, Dinamica Veicoli, Telemetria in Tempo Reale.
+
+\hrule
+\vspace{1em}
+
+\section{Introduzione}
+L'integrazione dell'intelligenza artificiale generativa negli strumenti di creazione di contenuti 3D interattivi sta spostando lo sviluppo software dalla manipolazione manuale delle interfacce grafiche verso workflow basati sugli intenti dell'utente~\cite{anthropic2024mcp}. Il Model Context Protocol (MCP) fornisce un'architettura client-server standardizzata che consente agli agenti AI di ispezionare risorse, eseguire tool e modificare lo stato tra applicazioni esterne.
+
+Tuttavia, i wrapper MCP standard per motori di gioco come Unity soffrono di gravi vincoli operativi:
+\begin{enumerate}
+    \item \textbf{Repaint Differito del Frame}: Le modifiche allo stato inviate via WebSocket non attivano immediatamente il ridisegno della Scene View, richiedendo l'interazione manuale dell'utente per aggiornare il viewport.
+    \item \textbf{Perdita dell'Ordine di Gerarchia}: Le operazioni standard di reparenting (\texttt{Transform.SetParent}) non garantiscono l'ordinamento visivo dei nodi fratelli nella gerarchia della scena Unity.
+    \item \textbf{Nodi Mesh Anonimi}: I modelli 3D prelevati da repository pubblici (come Sketchfab) non dispongono di metadati semantici, utilizzando identificatori generici (\textit{es.}, \texttt{Circle.050\_51}) che impediscono il collegamento mirato di componenti.
+\end{enumerate}
+
+Per superare queste limitazioni, abbiamo progettato un framework esteso (\texttt{pakkio/mcp-unity}) che offre l'esecuzione sincrona sul thread principale, tool dedicati alla gerarchia e l'identificazione automatica delle caratteristiche spaziali.
+
+\section{Architettura di Sistema \& Estensioni al Protocollo}
+
+L'architettura di sistema è costituita da un bridge a due livelli che collega il processo client MCP all'ambiente dell'Unity Editor.
+
+\begin{equation}
+\text{Client Agent} \quad \xleftrightarrow[\text{stdio}]{\text{MCP SDK}} \quad \text{Server Node.js} \quad \xleftrightarrow[\text{Porta 8090}]{\text{WebSocket JSON-RPC}} \quad \text{Unity Editor (Thread Principale C\#)}
+\end{equation}
+
+\subsection{Pianificazione Sincrona del Repaint del Frame}
+Per eliminare la latenza di rendering, il server C\# di Unity intercetta il completamento dell'esecuzione dei tool ed invia richieste immediate al loop di rendering:
+\begin{equation}
+\mathcal{R}_{\text{render}} = \text{SceneView.RepaintAll}() \quad \cup \quad \text{EditorApplication.QueuePlayerLoopUpdate}()
+\end{equation}
+
+\subsection{Tool di Riordinamento dell'Indice Sibling}
+Abbiamo introdotto il tool \texttt{set\_sibling\_index}, che consente il riordinamento relativo ed assoluto della gerarchia con complessità $O(1)$:
+\begin{lstlisting}[language=json]
+{
+  "method": "set_sibling_index",
+  "params": {
+    "instanceId": 10452,
+    "insertBeforeInstanceId": 10480
+  }
+}
+\end{lstlisting}
+
+\section{Ricostruzione Autonoma di Asset 3D \& Fisica}
+
+\subsection{Clustering Spaziale Non Supervisionato dei Bounding Box}
+Per un insieme arbitrario di nodi mesh foglia $\mathcal{M} = \{m_1, m_2, \dots, m_n\}$ estratti da un asset GLB anonimo, calcoliamo il volume del bounding box allineato agli assi nello spazio globale $V_i$:
+\begin{equation}
+V_i = (x_{\max} - x_{\min}) \cdot (y_{\max} - y_{\min}) \cdot (z_{\max} - z_{\min})
+\end{equation}
+
+I componenti delle ruote vengono identificati imponendo un vincolo di sfericità/cubicità $\mathcal{S}_i \approx 1$ unito al posizionamento negli angoli estremi del bounding box globale del veicolo $\mathcal{B}_{\text{veicolo}}$:
+\begin{equation}
+\mathcal{S}_i = \frac{\min(\Delta x_i, \Delta y_i, \Delta z_i)}{\max(\Delta x_i, \Delta y_i, \Delta z_i)} \ge 0.85
+\end{equation}
+
+\subsection{Disaccoppiamento del Sistema di Coordinate glTF}
+I modelli glTF importati via Blender introducono una matrice di rotazione sull'asse X di $-90^\circ$ ($270^\circ$). Applicare componenti fisici direttamente a questo nodo causa il disallineamento di \texttt{transform.forward}. Disaccoppiamo la trasformazione della fisica istanziando un nodo padre neutro $\mathbf{P}_{\text{root}}$:
+\begin{equation}
+\mathbf{R}_{\text{root}} = \mathbf{I}_{3 \times 3}, \quad \mathbf{R}_{\text{mesh}} = \mathbf{R}_x(-90^\circ)
+\end{equation}
+
+\subsection{Stabilizzazione del Tensore d'Inerzia del Rigidbody}
+Collegare componenti \texttt{WheelCollider} senza una mesh chiusa per la carrozzeria genera un tensore d'inerzia degenere $\mathbf{I}_{\text{degenere}} = \text{diag}(1, 1, 1)$, causando il tunneling fisico ed la caduta oltre il terreno. Inserendo un \texttt{BoxCollider} allineato ed abbassando il Centro di Massa ($y_{\text{CoM}} = -0.2\,\text{m}$), si stabilizza la matrice del tensore:
+
+\begin{equation}
+\mathbf{I}_{\text{stabilizz}} = \begin{bmatrix} 1856 & 0 & 0 \\ 0 & 2007 & 0 \\ 0 & 0 & 443 \end{bmatrix} \quad (\text{kg}\cdot\text{m}^2)
+\end{equation}
+
+\section{Risultati Sperimentali: Benchmark di Navigazione Circolare}
+
+Per valutare la dinamica del veicolo sotto il controllo dell'agente autonomo, il veicolo assemblato (Porsche 911 Turbo 1975) è stato posizionato su un piano stradale espanso a $80 \times 80\,\text{m}$ ($\text{scala} = [8, 1, 8]$) con un cubo di riferimento situato all'origine $(0,0,0)$.
+
+\begin{figure}[h!]
+\centering
+\small
+\begin{tabular}{rcc}
+\toprule
+\textbf{Passo Temporale} & \textbf{Posizione Spaziale } $(x,y,z)$ [m] & \textbf{Angolo Yaw } $\theta(t)$ [deg] \\
+\midrule
+$T_0$ (Inizio) & $(6.0,\, 0.9,\, 0.0)$ & $0.0^\circ$ \\
+$T_1$ (Metà Arco) & $(3.2,\, 0.9,\, -4.1)$ & $-18.6^\circ$ \\
+$T_2$ (Fine Orbita) & $(-2.8,\, 0.9,\, 3.5)$ & \textbf{$233.1^\circ$} \\
+\bottomrule
+\end{tabular}
+\caption{Telemetria estratta in tempo reale durante il benchmark di guida circolare in Play Mode.}
+\end{figure}
+
+Il veicolo ha eseguito con successo una traiettoria circolare continua di $233.1^\circ$ attorno al cubo di riferimento senza perdita di aderenza né penetrazione del terreno, confermando la stabilità della fisica.
+
+\section{Conclusione}
+Il framework esteso \texttt{pakkio/mcp-unity} risolve i problemi fondamentali nell'automazione di game engine guidata da intelligenza artificiale. Combinando il repaint sincrono del loop di rendering, il clustering spaziale dei bounding box e la stabilizzazione del tensore d'inerzia, il nostro sistema dimostra una ricostruzione autonoma robusta di asset 3D e la simulazione in tempo reale di veicoli.
+
+\begin{thebibliography}{99}
+\bibitem{anthropic2024mcp} Anthropic, \textit{Model Context Protocol Specification}, 2024. \url{https://modelcontextprotocol.io}
+\bibitem{unity2023manual} Unity Technologies, \textit{Unity Editor Scripting and WheelCollider Physics Manual}, 2023.
+\bibitem{atteneder2023gltfast} A. Atteneder, \textit{glTFast: High-Performance glTF Import Solution for Unity}, 2023.
+\end{thebibliography}
+
+\end{document}

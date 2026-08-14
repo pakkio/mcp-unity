@@ -941,6 +941,79 @@ FindLocalAssetsTool findLocalAssetsTool = new FindLocalAssetsTool();
             GetMaterialInfoTool getMaterialInfoTool = new GetMaterialInfoTool();
             _tools.Add(getMaterialInfoTool.Name, getMaterialInfoTool);
 
+            // Register Prefab Tools
+            ApplyPrefabOverridesTool applyPrefabOverridesTool = new ApplyPrefabOverridesTool();
+            _tools.Add(applyPrefabOverridesTool.Name, applyPrefabOverridesTool);
+
+            RevertPrefabOverridesTool revertPrefabOverridesTool = new RevertPrefabOverridesTool();
+            _tools.Add(revertPrefabOverridesTool.Name, revertPrefabOverridesTool);
+
+            UnpackPrefabTool unpackPrefabTool = new UnpackPrefabTool();
+            _tools.Add(unpackPrefabTool.Name, unpackPrefabTool);
+
+            // Register Tags & Layers Tools
+            ManageTagsAndLayersTool manageTagsAndLayersTool = new ManageTagsAndLayersTool();
+            _tools.Add(manageTagsAndLayersTool.Name, manageTagsAndLayersTool);
+
+            // Register ScriptableObject Tools
+            CreateScriptableObjectTool createScriptableObjectTool = new CreateScriptableObjectTool();
+            _tools.Add(createScriptableObjectTool.Name, createScriptableObjectTool);
+
+            // Register RectTransform Tools
+            SetRectTransformTool setRectTransformTool = new SetRectTransformTool();
+            _tools.Add(setRectTransformTool.Name, setRectTransformTool);
+
+            // Register Terrain Tools
+            ManageTerrainTool manageTerrainTool = new ManageTerrainTool();
+            _tools.Add(manageTerrainTool.Name, manageTerrainTool);
+
+            // Register ProBuilder Tools
+            ProBuilderCreateShapeTool proBuilderCreateShapeTool = new ProBuilderCreateShapeTool();
+            _tools.Add(proBuilderCreateShapeTool.Name, proBuilderCreateShapeTool);
+
+            ProBuilderMeshOpTool proBuilderMeshOpTool = new ProBuilderMeshOpTool();
+            _tools.Add(proBuilderMeshOpTool.Name, proBuilderMeshOpTool);
+
+            // Register Lighting and Illumination Tools
+            ManageLightingTool manageLightingTool = new ManageLightingTool();
+            _tools.Add(manageLightingTool.Name, manageLightingTool);
+
+            ConfigureLightProbeGroupTool configureLightProbeGroupTool = new ConfigureLightProbeGroupTool();
+            _tools.Add(configureLightProbeGroupTool.Name, configureLightProbeGroupTool);
+
+            CreateReflectionProbeTool createReflectionProbeTool = new CreateReflectionProbeTool();
+            _tools.Add(createReflectionProbeTool.Name, createReflectionProbeTool);
+
+            // Register Culling and Optimization Tools
+            ManageOcclusionCullingTool manageOcclusionCullingTool = new ManageOcclusionCullingTool();
+            _tools.Add(manageOcclusionCullingTool.Name, manageOcclusionCullingTool);
+
+            ConfigureLODGroupTool configureLODGroupTool = new ConfigureLODGroupTool();
+            _tools.Add(configureLODGroupTool.Name, configureLODGroupTool);
+
+            ConfigureCameraCullingTool configureCameraCullingTool = new ConfigureCameraCullingTool();
+            _tools.Add(configureCameraCullingTool.Name, configureCameraCullingTool);
+
+            // Register Collider and Physics Material Tools
+            ConfigureCollidersTool configureCollidersTool = new ConfigureCollidersTool();
+            _tools.Add(configureCollidersTool.Name, configureCollidersTool);
+
+            // Register Texture Importer Tools
+            ConfigureTextureSettingsTool configureTextureSettingsTool = new ConfigureTextureSettingsTool();
+            _tools.Add(configureTextureSettingsTool.Name, configureTextureSettingsTool);
+
+            // Register AI Navigation / NavMesh Tools
+            ManageNavMeshTool manageNavMeshTool = new ManageNavMeshTool();
+            _tools.Add(manageNavMeshTool.Name, manageNavMeshTool);
+
+            // Register Post-Processing & Rendering Volume Tools
+            ConfigurePostProcessingTool configurePostProcessingTool = new ConfigurePostProcessingTool();
+            _tools.Add(configurePostProcessingTool.Name, configurePostProcessingTool);
+
+            // Register Cinemachine Virtual Camera Tools
+            CreateVirtualCameraTool createVirtualCameraTool = new CreateVirtualCameraTool();
+            _tools.Add(createVirtualCameraTool.Name, createVirtualCameraTool);
+
             // Register BatchExecuteTool (must be registered last as it needs access to other tools)
             BatchExecuteTool batchExecuteTool = new BatchExecuteTool(this);
             _tools.Add(batchExecuteTool.Name, batchExecuteTool);

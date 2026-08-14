@@ -174,6 +174,27 @@ If no valid setting is found, Node falls back to:
 - `raycast_query` — Executes a physics raycast in the scene
 - `copy_component` — Copies a component from one GameObject to another
 - `draw_scene_gizmo` — Draws a temporary debug shape in the scene view
+- `apply_prefab_overrides` — Applies modifications/overrides from a scene prefab instance back to its source Prefab Asset
+- `revert_prefab_overrides` — Reverts property and component overrides on a scene prefab instance back to prefab asset defaults
+- `unpack_prefab` — Unpacks a prefab instance in the scene into regular GameObjects
+- `manage_tags_and_layers` — Gets or adds Unity Tags, Physics Layers (indices 8-31), and Sorting Layers
+- `create_scriptable_object` — Creates a new ScriptableObject asset file (.asset) with optional serialized field values
+- `set_rect_transform` — Sets RectTransform UI layout properties (anchor presets, anchoredPosition, sizeDelta, pivot, offsets)
+- `manage_terrain` — Creates, sculpts, textures, and manages Unity Terrains and trees
+- `probuilder_create_shape` — Generates 3D ProBuilder greyboxing shapes (cube, stair, cylinder, arch, prism, pipe, etc.)
+- `probuilder_mesh_op` — Performs ProBuilder mesh operations (subdivide, export to asset, strip ProBuilder scripts)
+- `manage_lighting` — Manages environment/ambient illumination, skybox, and lightmap baking (bake, cancel, clear, status)
+- `configure_light_probe_group` — Creates or populates a LightProbeGroup with an automated 3D grid layout
+- `create_reflection_probe` — Creates and configures Reflection Probes for localized environment reflections
+- `manage_occlusion_culling` — Manages Occlusion Culling (baking, clearing, status, Occluder/Occludee static flags, Occlusion Areas/Portals)
+- `configure_lod_group` — Configures LODGroup (Level of Detail) with distance/screen height thresholds and renderer slots
+- `configure_camera_culling` — Configures Camera culling properties: layer-based draw distances (layerCullDistances) and far clip planes
+- `configure_colliders` — Configures MeshColliders (convex hull, trigger, custom meshes), hierarchy colliders, and PhysicMaterials
+- `configure_texture_settings` — Configures texture asset import settings (Normal Map, Sprite, Default, Max Size, sRGB, Read/Write)
+- `manage_navmesh` — Manages AI Navigation (bakes/clears NavMesh, configures NavMeshAgents and NavMeshObstacles, queries pathfinding routes)
+- `configure_post_processing` — Creates/configures Post-Processing Volumes and Volume Profiles (Bloom, Tonemapping, Vignette, Color Adjustments, DOF)
+- `create_virtual_camera` — Creates/configures Cinemachine Virtual Camera rigs (Follow, LookAt, 3rd Person, First Person POV, Orbit)
+- `execute_batch` — Executes multiple MCP Unity operations in a single synchronous Unity frame
 
 ### Available apps (current)
 - `show_unity_dashboard` — Open the Unity dashboard MCP App in VS Code

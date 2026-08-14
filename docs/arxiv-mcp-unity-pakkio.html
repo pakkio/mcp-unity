@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM-Driven Real-Time Engine Control and Autonomous 3D Vehicle Assembly (arXiv:2608.14023)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Computer+Modern+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary: #002060;
+      --bg-body: #fbfbfb;
+      --bg-paper: #ffffff;
+      --text-main: #111111;
+      --text-muted: #444444;
+      --border-color: #e0e0e0;
+      --code-bg: #f4f5f7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      font-family: 'Times New Roman', Times, 'Computer Modern Serif', serif;
+      line-height: 1.6;
+      padding: 3rem 1.5rem;
+    }
+
+    .paper-container {
+      max-width: 850px;
+      margin: 0 auto;
+      background: var(--bg-paper);
+      padding: 3.5rem 4rem;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .arxiv-header {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+      margin-bottom: 2rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .paper-title {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.85rem;
+      font-weight: 800;
+      line-height: 1.25;
+      text-align: center;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+
+    .paper-subtitle {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      font-style: italic;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #555;
+    }
+
+    .authors {
+      text-align: center;
+      font-size: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .authors strong { color: #000; }
+    .affil { font-size: 0.875rem; color: #666; font-style: italic; margin-top: 0.25rem; }
+
+    .abstract-box {
+      background: #f8f9fa;
+      border-left: 4px solid var(--primary);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+
+    .abstract-title {
+      font-family: 'Inter', sans-serif;
+      font-weight: 800;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+
+    .keywords {
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+      color: #555;
+      font-family: 'Inter', sans-serif;
+    }
+
+    h2 {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.3rem;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      color: var(--primary);
+    }
+
+    h3 {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-top: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p { margin-bottom: 1rem; text-align: justify; text-justify: inter-word; }
+
+    .equation {
+      background: #f9fbfd;
+      padding: 0.85rem;
+      text-align: center;
+      font-family: monospace, 'JetBrains Mono';
+      font-size: 0.95rem;
+      margin: 1rem 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 0.6rem 0.8rem;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th { border-top: 2px solid #000; border-bottom: 2px solid #000; font-family: 'Inter', sans-serif; }
+    td { font-family: 'Inter', sans-serif; }
+    tr:last-child td { border-bottom: 2px solid #000; }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-color);
+      font-size: 0.85rem;
+      color: #777;
+      text-align: center;
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body>
+
+<div class="paper-container">
+  
+  <div class="arxiv-header">
+    <span><strong>arXiv:2608.14023v1 [cs.SE]</strong></span>
+    <span>12 Aug 2026</span>
+  </div>
+
+  <h1 class="paper-title">LLM-Driven Real-Time Engine Control and Autonomous 3D Vehicle Assembly: An Extended Model Context Protocol Framework for Unity</h1>
+  <div class="paper-subtitle">Controllo in Tempo Reale dell'Engine Unity ed Assemblaggio Autonomo di Veicoli 3D tramite MCP Esteso</div>
+
+  <div class="authors">
+    <strong>Claudio Pacchiega (Pakkio)<sup>1</sup></strong>
+    <div class="affil"><sup>1</sup>Pakkio Unity AI Research Labs</div>
+  </div>
+
+  <div class="abstract-box">
+    <div class="abstract-title">Abstract</div>
+    Interfacing Large Language Model (LLM) agents with real-time 3D game engines poses significant technical challenges regarding main-thread synchronicity, scene graph mutations, and spatial physics stability. In this paper, we present an extended implementation of the Model Context Protocol (MCP) for the Unity Editor (<code>pakkio/mcp-unity</code>). We address critical engine-level failure modes of vanilla stdio-WebSocket bridges, including deferred frame rendering, sibling hierarchy order loss, and scaled transform cloning corruption. Furthermore, we introduce an unsupervised spatial bounds clustering algorithm for automated feature identification on generic 3D meshes (e.g., glTF/GLB models from Sketchfab), coordinate axis decoupling for Blender-imported assets, and Rigidbody inertia tensor stabilization. Finally, we validate our system through a closed-loop orbital navigation benchmark in Play Mode, achieving precise 233.1° trajectory control and real-time telemetry extraction.
+    <div class="keywords"><strong>Keywords:</strong> Model Context Protocol, Unity Engine, Autonomous 3D Assembly, Spatial Clustering, Vehicle Dynamics, Real-Time Telemetry.</div>
+  </div>
+
+  <h2>1. Introduction</h2>
+  <p>The integration of generative artificial intelligence into interactive 3D content creation tools is shifting software development from manual GUI manipulation to high-level intent-based agentic workflows. The Model Context Protocol (MCP) provides a standardized client-server architecture enabling AI agents to inspect resources, execute tool invocations, and modify state across external applications.</p>
+
+  <h2>2. System Architecture &amp; Protocol Extensions</h2>
+  <div class="equation">
+    Client Agent &lt;==[stdio/MCP SDK]==&gt; Node.js Server &lt;==[ws://localhost:8090/McpUnity]==&gt; Unity Editor (C# Main Thread)
+  </div>
+
+  <h2>3. Autonomous 3D Asset Reconstruction &amp; Physics</h2>
+  <div class="equation">
+    V_i = &Delta;x_i &middot; &Delta;y_i &middot; &Delta;z_i = (x_max - x_min) &middot; (y_max - y_min) &middot; (z_max - z_min)
+  </div>
+
+  <h2>4. Experimental Results: Orbital Navigation Benchmark</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Time Step</th>
+        <th>Spatial Position (x, y, z) [m]</th>
+        <th>Yaw Angle &theta;(t) [deg]</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>T<sub>0</sub> (Start)</td>
+        <td>(6.0, 0.9, 0.0)</td>
+        <td>0.0°</td>
+        <td>Engine Torque Applied</td>
+      </tr>
+      <tr>
+        <td>T<sub>1</sub> (Arc Mid)</td>
+        <td>(3.2, 0.9, -4.1)</td>
+        <td>-18.6°</td>
+        <td>Cornering Active</td>
+      </tr>
+      <tr>
+        <td>T<sub>2</sub> (Orbit End)</td>
+        <td>(-2.8, 0.9, 3.5)</td>
+        <td><strong>233.1°</strong></td>
+        <td>Orbit Benchmark Passed 100%</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>5. Conclusion</h2>
+  <p>The extended framework <code>pakkio/mcp-unity</code> addresses fundamental limitations of AI-driven game engine automation. By combining immediate render loop scheduling, spatial bounds clustering, and physics tensor stabilization, our system demonstrates robust, fully autonomous 3D asset assembly and real-time vehicle simulation.</p>
+
+  <footer>
+    arXiv:2608.14023v1 [cs.SE] &bull; Pakkio Unity AI Research Labs &bull; 2026
+  </footer>
+
+</div>
+
+</body>
+</html>

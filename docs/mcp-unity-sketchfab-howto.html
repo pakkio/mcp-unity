@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP Unity + Sketchfab Drivable Car Field Manual & How-To Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-card: #131b2e;
+      --bg-card-hover: #1a253e;
+      --bg-tertiary: #1e2a45;
+      --border-color: #273754;
+      --border-highlight: #3b82f6;
+      
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      
+      --role-you-border: #f59e0b;
+      --role-you-bg: rgba(245, 158, 11, 0.08);
+      --role-you-badge: #d97706;
+      --role-you-text: #fbbf24;
+      
+      --role-claude-border: #a855f7;
+      --role-claude-bg: rgba(168, 85, 247, 0.08);
+      --role-claude-badge: #9333ea;
+      --role-claude-text: #c084fc;
+      
+      --role-unity-border: #06b6d4;
+      --role-unity-bg: rgba(6, 182, 212, 0.08);
+      --role-unity-badge: #0891b2;
+      --role-unity-text: #22d3ee;
+      
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-blue: #3b82f6;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      line-height: 1.6;
+      padding: 0;
+      margin: 0;
+    }
+
+    /* Layout structure */
+    .app-container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      width: 320px;
+      background-color: #0d1322;
+      border-right: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 1.5rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #3b82f6, #a855f7);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: #fff;
+    }
+
+    .brand-title {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+    }
+
+    .brand-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Filter Controls */
+    .filter-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .filter-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+    }
+
+    .search-input {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.6rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--border-highlight);
+    }
+
+    .role-filters {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover {
+      border-color: var(--text-muted);
+      color: var(--text-main);
+    }
+
+    .filter-btn.active[data-role="all"] { background: #1e293b; border-color: #475569; color: #fff; }
+    .filter-btn.active[data-role="you"] { background: var(--role-you-bg); border-color: var(--role-you-border); color: var(--role-you-text); }
+    .filter-btn.active[data-role="claude"] { background: var(--role-claude-bg); border-color: var(--role-claude-border); color: var(--role-claude-text); }
+    .filter-btn.active[data-role="unity"] { background: var(--role-unity-bg); border-color: var(--role-unity-border); color: var(--role-unity-text); }
+
+    /* Nav items */
+    .nav-phases {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .nav-phase-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--border-highlight);
+      margin-bottom: 0.5rem;
+    }
+
+    .nav-links {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .nav-item a {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.45rem 0.6rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.82rem;
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+
+    .nav-item a:hover {
+      background-color: var(--bg-card);
+      color: var(--text-main);
+    }
+
+    .nav-item.active a {
+      background-color: var(--bg-tertiary);
+      color: var(--text-main);
+      font-weight: 600;
+      border-left: 3px solid var(--border-highlight);
+    }
+
+    .step-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      color: var(--text-dim);
+    }
+
+    /* Main Content Area */
+    .main-content {
+      flex: 1;
+      padding: 2.5rem 3rem;
+      max-width: 1100px;
+      overflow-y: auto;
+    }
+
+    .header-banner {
+      background: linear-gradient(135deg, rgba(30, 42, 69, 0.6), rgba(15, 23, 42, 0.8));
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header-banner::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #f59e0b, #a855f7, #06b6d4);
+    }
+
+    .header-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-description {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      max-width: 800px;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Legend Box */
+    .legend-box {
+      display: flex;
+      gap: 1.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.82rem;
+    }
+
+    .legend-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    .legend-indicator.you { background: var(--role-you-border); }
+    .legend-indicator.claude { background: var(--role-claude-border); }
+    .legend-indicator.unity { background: var(--role-unity-border); }
+
+    /* Phase Containers */
+    .phase-container {
+      margin-bottom: 3rem;
+    }
+
+    .phase-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .phase-number {
+      background: var(--border-highlight);
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.85rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .phase-title-text {
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    /* Step Card */
+    .step-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .step-card:hover {
+      border-color: #334155;
+    }
+
+    .step-header {
+      padding: 1rem 1.25rem;
+      background-color: rgba(30, 42, 69, 0.4);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .step-header-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .step-num-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--border-highlight);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .step-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .toggle-icon {
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      transition: transform 0.2s;
+    }
+
+    .step-card.collapsed .toggle-icon {
+      transform: rotate(-90deg);
+    }
+
+    .step-card.collapsed .step-body {
+      display: none;
+    }
+
+    .step-body {
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* Multi-Role Blocks */
+    .role-block {
+      border-radius: 8px;
+      border-left: 4px solid var(--border-color);
+      padding: 1rem 1.25rem;
+      background-color: rgba(15, 23, 42, 0.5);
+      position: relative;
+    }
+
+    .role-block.you {
+      border-left-color: var(--role-you-border);
+      background-color: var(--role-you-bg);
+    }
+
+    .role-block.claude {
+      border-left-color: var(--role-claude-border);
+      background-color: var(--role-claude-bg);
+    }
+
+    .role-block.unity {
+      border-left-color: var(--role-unity-border);
+      background-color: var(--role-unity-bg);
+    }
+
+    .role-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.6rem;
+    }
+
+    .role-tag {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .role-block.you .role-tag { background: var(--role-you-badge); color: #fff; }
+    .role-block.claude .role-tag { background: var(--role-claude-badge); color: #fff; }
+    .role-block.unity .role-tag { background: var(--role-unity-badge); color: #fff; }
+
+    .role-content {
+      font-size: 0.9rem;
+      color: var(--text-main);
+    }
+
+    /* Verbatim quote formatting */
+    .verbatim-quote {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88rem;
+      color: var(--role-you-text);
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      margin-bottom: 0.6rem;
+      display: inline-block;
+      width: 100%;
+    }
+
+    /* Plain-English Gloss Box */
+    .gloss-box {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 6px;
+      padding: 0.6rem 0.85rem;
+      font-size: 0.85rem;
+      color: #fef08a;
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+    }
+
+    .gloss-icon {
+      font-weight: 700;
+      color: var(--role-you-border);
+      flex-shrink: 0;
+    }
+
+    /* Code & Terminal Blocks */
+    .code-block {
+      background-color: #090d16;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: #e2e8f0;
+      overflow-x: auto;
+      margin-top: 0.5rem;
+      position: relative;
+    }
+
+    .code-title {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.4rem;
+      font-weight: 600;
+    }
+
+    .telemetry-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--accent-green);
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      display: inline-block;
+      margin-top: 0.4rem;
+    }
+
+    .bug-warning {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      padding: 0.6rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+    }
+
+    .fix-success {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+      padding: 0.6rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 4rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .app-container {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+      }
+      .main-content {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">M</div>
+      <div>
+        <div class="brand-title">MCP Unity Field Manual</div>
+        <div class="brand-subtitle">Sketchfab + Vehicle Physics Recipe</div>
+      </div>
+    </div>
+
+    <!-- Filter Controls -->
+    <div class="filter-section">
+      <div class="filter-label">Search Recipe Steps</div>
+      <input type="text" id="searchInput" class="search-input" placeholder="Filter by keyword (e.g. inertia, glTF)..." oninput="filterSteps()">
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-label">Filter Dialogue Roles</div>
+      <div class="role-filters">
+        <button class="filter-btn active" data-role="all" onclick="setRoleFilter('all')">All</button>
+        <button class="filter-btn" data-role="you" onclick="setRoleFilter('you')">YOU</button>
+        <button class="filter-btn" data-role="claude" onclick="setRoleFilter('claude')">CLAUDE</button>
+        <button class="filter-btn" data-role="unity" onclick="setRoleFilter('unity')">UNITY</button>
+      </div>
+    </div>
+
+    <!-- Nav list -->
+    <nav class="nav-phases">
+      <div>
+        <div class="nav-phase-title">Phase 1: Installation & Setup</div>
+        <ul class="nav-links">
+          <li class="nav-item"><a href="#step-1"><span class="step-badge">01</span> Package Connection</a></li>
+          <li class="nav-item"><a href="#step-2"><span class="step-badge">02</span> Git Package & .meta Fix</a></li>
+          <li class="nav-item"><a href="#step-3"><span class="step-badge">03</span> Scene Repaint Fix</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="nav-phase-title">Phase 2: Model Acquisition</div>
+        <ul class="nav-links">
+          <li class="nav-item"><a href="#step-4"><span class="step-badge">04</span> Sketchfab Model Search</a></li>
+          <li class="nav-item"><a href="#step-5"><span class="step-badge">05</span> AI Credential Boundary</a></li>
+          <li class="nav-item"><a href="#step-6"><span class="step-badge">06</span> glTFast Importer Setup</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="nav-phase-title">Phase 3: Assembly & Physics</div>
+        <ul class="nav-links">
+          <li class="nav-item"><a href="#step-7"><span class="step-badge">07</span> Scene Placement</a></li>
+          <li class="nav-item"><a href="#step-8"><span class="step-badge">08</span> Wheel Bounds Clustering</a></li>
+          <li class="nav-item"><a href="#step-9"><span class="step-badge">09</span> Italian Hierarchy Renaming</a></li>
+          <li class="nav-item"><a href="#step-10"><span class="step-badge">10</span> Sibling Order Tool</a></li>
+          <li class="nav-item"><a href="#step-11"><span class="step-badge">11</span> Scene Reference Linking</a></li>
+          <li class="nav-item"><a href="#step-12"><span class="step-badge">12</span> CCK Drivable Wiring</a></li>
+          <li class="nav-item"><a href="#step-13"><span class="step-badge">13</span> Axle Orientation Fix</a></li>
+          <li class="nav-item"><a href="#step-14"><span class="step-badge">14</span> Free-Fall Diagnosis</a></li>
+          <li class="nav-item"><a href="#step-15"><span class="step-badge">15</span> glTF 270° Rotation Fix</a></li>
+          <li class="nav-item"><a href="#step-16"><span class="step-badge">16</span> Inertia Tensor & Body Box</a></li>
+          <li class="nav-item"><a href="#step-17"><span class="step-badge">17</span> Play Mode Forward Drive</a></li>
+          <li class="nav-item"><a href="#step-18"><span class="step-badge">18</span> Floor Plane Expansion</a></li>
+          <li class="nav-item"><a href="#step-19"><span class="step-badge">19</span> Landmark Cube Circling</a></li>
+          <li class="nav-item"><a href="#step-20"><span class="step-badge">20</span> SKILL.md Handoff</a></li>
+        </ul>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Header Banner -->
+    <header class="header-banner">
+      <h1 class="header-title">MCP Unity + Sketchfab Drivable Car Field Manual</h1>
+      <p class="header-description">
+        An interactive, step-by-step field guide documenting the complete lifecycle of setting up Unity MCP tools, downloading 3D GLB assets from Sketchfab, wiring ChilloutVR (CCK) drivable vehicle components, and debugging deep Unity engine physics pitfalls.
+      </p>
+
+      <!-- Legend -->
+      <div class="legend-box">
+        <div class="legend-item">
+          <div class="legend-indicator you"></div>
+          <span><strong>YOU (User):</strong> Verbatim input + explicit Plain-English Context & Gloss</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-indicator claude"></div>
+          <span><strong>CLAUDE (AI Assistant):</strong> Reasoning, parameters, tool calls & fixes</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-indicator unity"></div>
+          <span><strong>UNITY (Engine):</strong> Console logs, inspector states & physics telemetry</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- PHASE 1 -->
+    <section class="phase-container">
+      <div class="phase-header">
+        <span class="phase-number">Phase 1</span>
+        <h2 class="phase-title-text">Installation, Configuration & MCP Bridge Setup</h2>
+      </div>
+
+      <!-- Step 1 -->
+      <article class="step-card" id="step-1">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 01</span>
+            <h3 class="step-name">Verifying Unity MCP Server Handshake & Health</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">"you can do some gets on unity?"</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>The user is asking the agent to perform read-only inspection calls ("gets") to verify that the MCP Unity server running inside the Editor is connected and responsive over WebSocket.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Executes read-only MCP queries to verify the WebSocket bridge:
+              <div class="code-block">
+                <div class="code-title">MCP Tools Dispatched</div>
+                mcp-unity.get_scene_info()<br>
+                mcp-unity.get_play_mode_status()<br>
+                mcp-unity.get_console_logs()
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              WebSocket response received on <code>ws://localhost:8090/McpUnity</code>:
+              <div class="telemetry-tag">Active Scene: pakkio.unity | PlayMode: Edit Mode | Loaded Objects: Main Camera, Directional Light, CCKPlayModeActivator</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 2 -->
+      <article class="step-card" id="step-2">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 02</span>
+            <h3 class="step-name">Git Package Immutability & Missing .meta File Remediation</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">[Image #4 - Unity Console Compiler Error]</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>The user provides a screenshot showing a compiler error (<code>CS0246: The type or namespace name 'ExportPackageTool' could not be found</code>) inside <code>McpUnityServer.cs</code> after pulling updates.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Identifies that Unity treats git-sourced packages as immutable and <strong>silently drops any C# script missing a <code>.meta</code> file</strong>. Generates proper GUID meta files for <code>ExportPackageTool.cs</code> and <code>McpUnityServerBatchModeTests.cs</code>:
+              <div class="code-block">
+                <div class="code-title">PowerShell Command Executed</div>
+                powershell -Command "[guid]::NewGuid().ToString('N')"
+              </div>
+              <div class="fix-success">Created ExportPackageTool.cs.meta with valid GUID. Pushed commit b5acafc to origin/main.</div>
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              Package re-resolved via Package Manager to commit <code>b5acafc</code>:
+              <div class="telemetry-tag">Asset Pipeline Refresh: Scripting domain reload completed in 29.0s. Tundra build success: McpUnity.Editor.dll rebuilt cleanly.</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 3 -->
+      <article class="step-card" id="step-3">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 03</span>
+            <h3 class="step-name">Eliminating Viewport Repaint Lag via InternalEditorUtility</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">"i see it with some s delay" ... "and 2nd especially"</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>The user clarifies that while MCP tool responses return instantly, the Scene View visually updates late because Unity only repaints on mouse move or focus events.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Inspects tool C# code and finds that <code>EditorUtility.SetDirty()</code> was called without forcing a viewport repaint. Retrofits 8 mutation sites across <code>TransformTools.cs</code>, <code>MaterialTools.cs</code>, <code>GameObjectTools.cs</code>, <code>UpdateComponentTool.cs</code>, and <code>UpdateGameObjectTool.cs</code>:
+              <div class="code-block">
+                <div class="code-title">C# Repaint Call Added</div>
+                UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              Package updated to commit <code>3c368be</code>.
+              <div class="telemetry-tag">Scene View, Game View, and Inspector now update immediately upon tool execution without manual focus shifts.</div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- PHASE 2 -->
+    <section class="phase-container">
+      <div class="phase-header">
+        <span class="phase-number">Phase 2</span>
+        <h2 class="phase-title-text">Model Acquisition & AI Credential Safety</h2>
+      </div>
+
+      <!-- Step 4 -->
+      <article class="step-card" id="step-4">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 04</span>
+            <h3 class="step-name">Searching Sketchfab for Downloadable 3D Vehicle Models</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">"import a prefab machine from sketchfab a car"</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>User requests searching Sketchfab for a free, downloadable 3D car model to import into the active Unity scene.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Uses browser automation to search Sketchfab for free CC-Attribution downloadable vehicles. Locates <strong>"FREE 1975 Porsche 911 (930) Turbo"</strong> by Lionsharp Studios.
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY / BROWSER</span></div>
+            <div class="role-content">
+              Model modal opened in browser: <code>FREE 1975 Porsche 911 (930) Turbo</code>. License: CC-BY Attribution.
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 5 -->
+      <article class="step-card" id="step-5">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 05</span>
+            <h3 class="step-name">AI Safety Boundary: Mandatory Manual User Authentication</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">"i did log in"</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>The AI agent halted execution when presented with a password login modal (following strict safety rules against submitting pre-filled user credentials). The user logs in manually and instructs the agent to continue.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Resumes browser session, selects the 1K textured self-contained GLB download format (21.97 MB), and saves it to <code>~/Downloads/free_1975_porsche_911_930_turbo.glb</code>.
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY / BROWSER</span></div>
+            <div class="role-content">
+              <div class="telemetry-tag">File Downloaded: free_1975_porsche_911_930_turbo.glb (21.97 MB, GLB container format)</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 6 -->
+      <article class="step-card" id="step-6">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 06</span>
+            <h3 class="step-name">Installing glTFast Importer Package for GLB Support</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">[Implied GLB Import Dependency]</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>Unity does not natively support <code>.glb</code> container files without an official extension package.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Invokes the Package Manager tool to add the official glTFast importer package:
+              <div class="code-block">
+                <div class="code-title">MCP Tool Request</div>
+                mcp-unity.add_package({ packageName: "com.unity.cloud.gltfast" })
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              Package Manager resolved dependency:
+              <div class="telemetry-tag">Added com.unity.cloud.gltfast@6.14.1 to manifest.json. Native GLB runtime asset importer active.</div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- PHASE 3 -->
+    <section class="phase-container">
+      <div class="phase-header">
+        <span class="phase-number">Phase 3</span>
+        <h2 class="phase-title-text">Scene Assembly, Physics Remediation & Autonomous Driving</h2>
+      </div>
+
+      <!-- Step 7 -->
+      <article class="step-card" id="step-7">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 07</span>
+            <h3 class="step-name">Scene Asset Placement & Non-Colliding Alignment</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">"insert into pakkio screen touching the floor but not colliding with cube" *scene</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>[Correction: "screen" -> "scene"] User instructs placing the imported Porsche GLB into the active <code>pakkio</code> scene, resting on the floor plane surface (y=0.917) and offset from the red cube (+3.4m in X).</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Places asset into scene at calculated ground position:
+              <div class="code-block">
+                <div class="code-title">MCP Tool Call</div>
+                mcp-unity.add_asset_to_scene({ assetPath: "Assets/free_1975_porsche_911_930_turbo.glb", position: {x: 3.0, y: 0.917, z: 0.53} })
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              <div class="telemetry-tag">GameObject 'Porsche911_930Turbo' instantiated at position (3.0, 0.917, 0.530).</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 8 -->
+      <article class="step-card" id="step-8">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 08</span>
+            <h3 class="step-name">Bounds-Based Spatial Wheel Mesh Identification</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">"put inside model cck scripts for driving it in chillout" ... "4 objects round touching floor"</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>User requests setting up ChilloutVR (CCK) driving scripts. Sketchfab GLB nodes have generic names (<code>Circle.050_51</code>, etc.); user notes there are 4 round wheel objects touching the floor.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Computes <code>MeshRenderer.bounds</code> programmatically across all 140 leaf nodes to locate the 4 wheel meshes by size (~0.7m diameter) and corner positions:
+              <div class="code-block">
+                <div class="code-title">Spatial Clustering Data</div>
+                FL: Circle.050_51 (3.82, 1.37, 1.82)<br>
+                FR: Circle.038_1 (2.17, 1.37, 1.82)<br>
+                RL: Circle.051_37 (3.82, 1.37, -0.75)<br>
+                RR: Circle.037_2 (2.17, 1.37, -0.75)
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              <div class="telemetry-tag">Wheel mesh instances identified & mapped to physical corner positions.</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 9 -->
+      <article class="step-card" id="step-9">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 09</span>
+            <h3 class="step-name">Italian Descriptive Hierarchy Renaming</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">"name all obj in hier of the car now they are not meaningful" ... "put names in italian"</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>User requests replacing meaningless default node names with clear Italian descriptive names.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Executes batch rename across all 62 sub-objects using spatial shape descriptors in Italian:
+              <div class="code-block">
+                <div class="code-title">Renamed Sub-Objects Example</div>
+                Ruota_AnterioreSinistra, Ruota_AnterioreDestra,<br>
+                Ruota_PosterioreSinistra, Ruota_PosterioreDestra,<br>
+                Carrozzeria_Centrale_Grande, CatturaOmbra_AO
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              <div class="telemetry-tag">Updated 62 GameObject names in Hierarchy.</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 10 -->
+      <article class="step-card" id="step-10">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 10</span>
+            <h3 class="step-name">Hierarchy Reordering & set_sibling_index MCP Tool</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">"redo hier in organical way so wheels are close" ... "there are 4 obj out of the car"</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>User requests grouping the 4 wheel objects together in the hierarchy. Discovers that <code>reparent_gameobject</code> cannot change sibling index, and duplicate+delete corrupted transforms under scaled parent chains.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Fixes <code>duplicate_gameobject</code> transform bug (instantiating directly with parent) and creates new <code>set_sibling_index</code> MCP tool:
+              <div class="code-block">
+                <div class="code-title">New Tool Registration</div>
+                mcp-unity.set_sibling_index({ objectPath: "...", siblingIndex: 58 })
+              </div>
+              <div class="fix-success">All 4 wheels grouped adjacently at sibling indices 58-61 with exact world transforms preserved.</div>
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              <div class="telemetry-tag">Hierarchy reordered: Ruota_AnterioreSinistra, Ruota_AnterioreDestra, Ruota_PosterioreSinistra, Ruota_PosterioreDestra grouped cleanly.</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 11 -->
+      <article class="step-card" id="step-11">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 11</span>
+            <h3 class="step-name">Scene Object Reference Resolution (update_component Extension)</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">"you said the mcp lacks tool for linking and connecting components"</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>Connecting scene object references (like <code>CVRWheelController.viewModel</code>) previously failed because <code>update_component</code> only supported asset paths. User requests extending the tool to support scene references.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Extends <code>UpdateComponentTool.cs</code> to resolve scene objects via <code>{"instanceId": N}</code> or <code>{"objectPath": "..."}</code> (falling back to <code>GetComponent</code> for typed fields), and supports <code>List&lt;T&gt;</code> arrays:
+              <div class="code-block">
+                <div class="code-title">C# Implementation in UpdateComponentTool.cs</div>
+                TryResolveSceneReference(instanceId, objectPath, targetType, out asset, out error)
+              </div>
+              <div class="fix-success">Pushed commit 3bbc89f to main.</div>
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              <div class="telemetry-tag">Package updated. update_component now links scene GameObjects, Components, and Component arrays cleanly.</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 12 -->
+      <article class="step-card" id="step-12">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 12</span>
+            <h3 class="step-name">Complete Drivable CCK Vehicle Component Graph Wiring</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">"updated package, go ahead and wire the wheels"</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>User prompts agent to perform the complete component wiring using the newly updated MCP capabilities.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Executes batch component wiring across all vehicle elements:
+              <div class="code-block">
+                <div class="code-title">MCP Component Link Payloads</div>
+                // 1. Link View Models on all 4 Wheel Controllers<br>
+                update_component({ objectPath: ".../WheelCollider_FL", componentName: "CVRWheelController", componentData: { viewModel: { instanceId: ID_FL } } })<br><br>
+                // 2. Link Rigidbody and Wheels Array on Hub Controller<br>
+                update_component({ objectPath: "Porsche911_930Turbo", componentName: "CVRWheelHubController", componentData: { rigidBody: { instanceId: ROOT_ID }, wheels: [{ instanceId: ID_FL }, { instanceId: ID_FR }, { instanceId: ID_RL }, { instanceId: ID_RR }] } })
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              <div class="telemetry-tag">Component graph fully linked: 4 viewModels assigned, rigidBody linked, wheels list populated with 4 CVRWheelControllers.</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 13 -->
+      <article class="step-card" id="step-13">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 13</span>
+            <h3 class="step-name">Axle Roles & Reverse Forward Steering Correction</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">"ruote anteriori<> posteriori"</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>[Correction: "Swap front and rear axle definitions"] User informs the agent that the front and rear axles were inverted (front axle is actually at local Z ≈ -0.45).</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Swaps axle properties and updates forward orientation:
+              <div class="code-block">
+                <div class="code-title">Axle Configuration Updates</div>
+                - Front wheels (Z ≈ -0.45): isSteerable = true, isMotorized = false<br>
+                - Rear wheels (Z ≈ +2.12): isSteerable = false, isMotorized = true (RWD)<br>
+                - CVRWheelHubController: reverseForward = true (car nose points toward -Z)
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              <div class="telemetry-tag">Axle roles updated. Steering assigned to front wheels, drive torque assigned to rear wheels.</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 14 -->
+      <article class="step-card" id="step-14">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 14</span>
+            <h3 class="step-name">Diagnosing Vehicle Free-Fall & Physics Tunneling</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">"test the car is drivable" ... "why the car keeps in falling thru the floor?"</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>Upon entering Play mode, the vehicle falls endlessly into deep space (y = -9389). User asks why the car keeps falling through the floor.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Executes an isolation control test: drops a simple rigid red Cube onto the floor plane to isolate floor collider health from vehicle physics issues:
+              <div class="bug-warning">Vehicle telemetry in Play Mode: y = -9389, velocity = -189 m/s (unbounded free-fall).</div>
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              <div class="telemetry-tag">Control Cube Test Result: Red Cube lands and settles stably at y=1.417 (bottom resting on y=0.917 plane). Floor MeshCollider is 100% operational!</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 15 -->
+      <article class="step-card" id="step-15">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 15</span>
+            <h3 class="step-name">Fixing glTF 270° X Root Rotation Vector Misalignment</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">[Implied Physics Diagnosis]</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>The glTFast importer left the root node with <code>eulerAngles (270, 0, 0)</code>, causing <code>transform.forward</code> to point straight UP (0, 1, 0).</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Discovers root cause: <code>CVRWheelHubController</code> calculates speed via <code>Vector3.Dot(transform.forward, velocity)</code>. Because <code>forward</code> pointed UP, vertical fall speed was measured as forward speed, zeroing engine torque curves.
+              <div class="code-block">
+                <div class="code-title">Transform Realignment</div>
+                1. Set root rotation to (0, 0, 0)<br>
+                2. Set child GLTF node rotation to (90, 0, 0) (canceling pair, visual mesh stays stationary)<br>
+                3. Recompute world positions for all wheel colliders & seats
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              <div class="telemetry-tag">Root forward vector realigned to horizontal world space (0, 0, -1).</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 16 -->
+      <article class="step-card" id="step-16">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 16</span>
+            <h3 class="step-name">Fixing Degenerate Inertia Tensor (1,1,1) via Body BoxCollider</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">[Implied Vehicle Inertia Fix]</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>Rigidbodies driven purely by WheelColliders have no body mass distribution, causing PhysX to report a degenerate <code>inertiaTensor (1,1,1)</code> and failing to simulate suspension forces.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Adds a physical <code>BoxCollider</code> (center 0, 0.4, 0; size 1.8, 1.2, 4.2) to the Rigidbody root to give PhysX real body inertia.
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              Play mode re-entered:
+              <div class="telemetry-tag">inertiaTensor jumped from (1, 1, 1) to (1856, 2007, 443). Vehicle settles stably on suspension at y = 0.9715!</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 17 -->
+      <article class="step-card" id="step-17">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 17</span>
+            <h3 class="step-name">Autonomous Play Mode Forward Drive Telemetry</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">[Play Mode Drive Command]</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>Testing vehicle acceleration in Play mode.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Sets <code>debugWASDSteering = true</code> on <code>CVRWheelHubController</code> and feeds forward throttle input for 4.0 seconds.
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              <div class="telemetry-tag">Drive Telemetry: Start Z = 0.53m -> 4s Throttle -> Final Z = 4.22m (Movement: +3.69m forward at y=0.89m). Vehicle drives successfully!</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 18 -->
+      <article class="step-card" id="step-18">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 18</span>
+            <h3 class="step-name">Ground Plane Expansion & Landmark Cube Setup</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">"round the cube as test with the car" ... "a bit faster"</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>User requests steering the car in a full circle around the red cube landmark, and increasing driving speed.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Expands floor plane scale from 10×10 to 80×80 (preventing edge drop-offs), moves Red Cube to origin (0,0,0) as landmark, and increases engine torque/top speed parameters.
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              <div class="telemetry-tag">Floor plane scaled to (8, 1, 8) [80m x 80m]. Red Cube set as origin landmark.</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 19 -->
+      <article class="step-card" id="step-19">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 19</span>
+            <h3 class="step-name">Circular Navigation Telemetry & Landmark Orbit</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">"it worked! stop play"</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>User verifies the vehicle successfully steered in an arc around the cube and requests stopping Play mode.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Samples live vehicle trajectory telemetry over Play session before stopping:
+              <div class="code-block">
+                <div class="code-title">Live Arc Telemetry</div>
+                Yaw angle progression: 0.0° -> -18.6° -> 233.1° (Completed 233° orbit around landmark)<br>
+                Position trajectory: (6.0, 0.9, 0.0) -> (3.2, 0.9, -4.1) -> (-2.8, 0.9, 3.5)
+              </div>
+              Stops Play mode cleanly.
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY</span></div>
+            <div class="role-content">
+              <div class="telemetry-tag">Play Mode stopped. State safely restored to Edit mode. Vehicle driving test 100% SUCCESS.</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Step 20 -->
+      <article class="step-card" id="step-20">
+        <div class="step-header" onclick="toggleStep(this)">
+          <div class="step-header-title">
+            <span class="step-num-badge">STEP 20</span>
+            <h3 class="step-name">Knowledge Capture & SKILL.md Memory Handoff</h3>
+          </div>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="step-body">
+          <div class="role-block you">
+            <div class="role-header"><span class="role-tag">YOU</span></div>
+            <div class="role-content">
+              <div class="verbatim-quote">"create a skill with what we learned from this session so we dont have to rediscover"</div>
+              <div class="gloss-box">
+                <span class="gloss-icon">💡 Context & Gloss:</span>
+                <span>User requests persisting all hard-won knowledge, package update workflows, and physics bug fixes into a permanent skill file.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-block claude">
+            <div class="role-header"><span class="role-tag">CLAUDE</span></div>
+            <div class="role-content">
+              Creates <code>.claude/skills/mcp-unity-dev/SKILL.md</code> capturing all tool gotchas, git package workflows, and physics remediation rules. Commits and pushes <code>dc54ca5</code>.
+            </div>
+          </div>
+
+          <div class="role-block unity">
+            <div class="role-header"><span class="role-tag">UNITY / GIT</span></div>
+            <div class="role-content">
+              <div class="telemetry-tag">Skill saved and pushed to repository. Memory active for all future AI coding sessions.</div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div>MCP Unity Package Field Manual & Tutorial</div>
+      <div>Built with Antigravity AI Engine</div>
+    </footer>
+  </main>
+</div>
+
+<script>
+  function toggleStep(header) {
+    const card = header.closest('.step-card');
+    card.classList.toggle('collapsed');
+  }
+
+  function setRoleFilter(role) {
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.role === role);
+    });
+
+    const blocks = document.querySelectorAll('.role-block');
+    blocks.forEach(block => {
+      if (role === 'all') {
+        block.style.display = 'block';
+      } else {
+        block.style.display = block.classList.contains(role) ? 'block' : 'none';
+      }
+    });
+  }
+
+  function filterSteps() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const cards = document.querySelectorAll('.step-card');
+
+    cards.forEach(card => {
+      const text = card.textContent.toLowerCase();
+      if (text.includes(query)) {
+        card.style.display = 'block';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+</script>
+
+</body>
+</html>

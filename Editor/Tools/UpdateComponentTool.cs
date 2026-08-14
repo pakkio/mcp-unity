@@ -114,12 +114,19 @@ namespace McpUnity.Tools
             McpLogger.LogInfo($"{Name}: updated component '{componentName}' on '{gameObject.name}' ({fieldSummary})" + (reason != null ? $" — {reason}" : ""));
 
             // Create the response
-            return new JObject
+            JObject response = new JObject
             {
                 ["success"] = true,
                 ["type"] = "text",
                 ["message"] = $"Successfully updated component '{componentName}' on GameObject '{gameObject.name}'"
             };
+
+            if (EditorApplication.isPlaying)
+            {
+                response["warning"] = "Unity is in Play Mode. Scene component edits will be discarded when Play Mode stops unless saved to a prefab.";
+            }
+
+            return response;
         }
         
         /// <summary>

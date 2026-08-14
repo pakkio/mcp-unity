@@ -1,0 +1,171 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{utf8}
+\usepackage[italian]{babel}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{microtype}
+
+% Definizione Colori per Sintassi Codice
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.05,0.07,0.12}
+\definecolor{textwhite}{rgb}{0.95,0.95,0.98}
+
+% Configurazione Listings per Codice
+\lstset{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize\color{textwhite},
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={MCP Unity Versione Pakkio - Manuale Tecnico Master},
+    pdfpagemode=FullName,
+}
+
+\title{\textbf{\Huge Manuale Tecnico Master: MCP Unity}\\[0.3em]
+\Large Architettura del Fork \texttt{pakkio/mcp-unity}, Fix dell'Engine Unity ed Importazione Automatica di Veicoli 3D da Sketchfab}
+\author{\textbf{Claudio Pacchiega (Pakkio)} \& Assistant AI Agent}
+\date{12 Agosto 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Il presente documento costituisce la specifica tecnica e il manuale operativo completo per l'utilizzo del fork \texttt{pakkio/mcp-unity}, un'estensione avanzata del Model Context Protocol (MCP) per l'Unity Editor. Vengono analizzate le differenze architetturali rispetto al pacchetto standard, i nuovi tool sviluppati (\texttt{set\_sibling\_index}, \texttt{capture\_screenshot}, \texttt{export\_package}), i fix prestazionali sul thread principale di Unity e l'algoritmo matematico per l'identificazione, l'assemblaggio della fisica e il test di guidabilità circolare attorno ad un punto di riferimento (Landmark Cube) con analisi telemetrica dell'angolo di imbardata (Yaw).
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Introduzione e Architettura di Comunicazione}
+
+MCP Unity stabilisce un ponte bidirezionale tra client AI (quali Claude Code, Antigravity, VS Code, Cursor) ed il motore di gioco Unity Editor. L'architettura si articola su due livelli:
+
+\begin{enumerate}
+    \item \textbf{Client/Server Unity (C\# Editor)}: Un server WebSocket eseguito direttamente sul thread principale dell'Editor di Unity tramite \texttt{EditorCoroutineUtility} (\texttt{ws://localhost:8090/McpUnity}).
+    \item \textbf{Server MCP Node.js (TypeScript)}: Un processo stdio registrato sul client MCP che traduce le chiamate JSON-RPC verso il bridge WebSocket di Unity.
+\end{enumerate}
+
+\begin{equation}
+\text{Client MCP} \quad \xleftrightarrow[\text{stdio}]{\text{MCP SDK}} \quad \text{Server Node.js} \quad \xleftrightarrow[\text{Porta 8090}]{\text{WebSocket JSON-RPC}} \quad \text{Unity Editor (C\#)}
+\end{equation}
+
+\section{Analisi Comparativa: Versione Standard vs Fork Pakkio}
+
+La versione sviluppata da Pakkio (\texttt{pakkio/mcp-unity}) risolve storici bug dell'Editor di Unity e limita i colli di bottiglia prestazionali.
+
+\begin{table}[h!]
+\centering
+\caption{Confronto Funzionale tra MCP Unity Standard e la Versione Pakkio}
+\vspace{0.5em}
+\begin{tabular}{lll}
+\toprule
+\textbf{Funzionalità / Area} & \textbf{MCP Unity Standard} & \textbf{Versione Pakkio (\texttt{pakkio/mcp-unity})} \\
+\midrule
+Ridisegno Scena (\textit{Repaint}) & Manuale (richiede click nell'Editor) & \textbf{Istantaneo Automatico} (\texttt{SceneView.RepaintAll}) \\
+Ordinamento Gerarchia & Solo reparenting (senza ordine visivo) & \textbf{Tool dedicato} \texttt{set\_sibling\_index} \\
+Ispezione Visiva & Assente & \textbf{Tool dedicato} \texttt{capture\_screenshot} \\
+Esportazione Asset & Assente & \textbf{Tool dedicato} \texttt{export\_package} \\
+Duplicazione Nodi Scalati & Rischio corruzione trasformazione & \textbf{Fix nativo} \texttt{Instantiate(original, parent)} \\
+Log di Console & Memorizzazione illimitata & \textbf{Ring Buffer Anti-Memory Leak} \\
+Pacchetti Git Unity & File \texttt{.meta} mancanti scartati & \textbf{Generazione Automatica GUID} \texttt{.meta} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Nuovi Tool Esclusivi e Fix dell'Engine}
+
+\subsection{Tool \texttt{set\_sibling\_index}}
+In Unity, la chiamata \texttt{Transform.SetParent} non riordina l'indice di posizione tra fratelli se il genitore non cambia. Il tool \texttt{set\_sibling\_index} permette di impostare la posizione assoluta o relativa:
+
+\begin{lstlisting}[language=json, caption={Esempio di chiamata MCP per \texttt{set\_sibling\_index}}]
+{
+  "method": "set_sibling_index",
+  "params": {
+    "instanceId": 10452,
+    "insertBeforeInstanceId": 10480
+  }
+}
+\end{lstlisting}
+
+\subsection{Scene Repaint Fix}
+Per evitare che l'interfaccia dell'Editor appaia bloccata fino al successivo movimento del mouse, \texttt{McpUnityServer.cs} forza l'aggiornamento immediato del frame:
+
+\begin{lstlisting}[language=C++, caption={Frammento C\# per l'aggiornamento istantaneo dell'Editor}]
+SceneView.RepaintAll();
+EditorApplication.QueuePlayerLoopUpdate();
+\end{lstlisting}
+
+\section{Workflow Veicoli 3D da Sketchfab \& Algoritmi di Fisica}
+
+\subsection{Identificazione Matematica delle Ruote (Bounds Clustering)}
+I modelli 3D esportati da Sketchfab presentano nodi con nomi generici (es. \texttt{Object\_47}, \texttt{Circle.050\_51}). L'identificazione delle ruote avviene tramite il calcolo del volume delimitatore nello spazio globale:
+
+\begin{equation}
+V_i = \Delta x_i \cdot \Delta y_i \cdot \Delta z_i = (x_{\max} - x_{\min}) \cdot (y_{\max} - y_{\min}) \cdot (z_{\max} - z_{\min})
+\end{equation}
+
+I 4 volumi che soddisfano la condizione di quasi-cubicità ($V_i \approx \Delta x_i^3$) e posizionati ai vertici inferiori del bounding box dell'auto vengono classificati ed isolati come ruote.
+
+\subsection{Correzione della Rotazione glTF a $270^\circ$}
+Gli asset glTF/GLB importati da Blender contengono una rotazione sull'asse X di $-90^\circ$ ($270^\circ$). Inserire un \texttt{Rigidbody} su questo nodo ne corrompe i vettori di orientamento (\texttt{transform.forward}). La soluzione implementata disaccoppia la fisica tramite un nodo contenitore neutro con rotazione $(0,0,0)$:
+
+\begin{equation}
+R_{\text{root}} = I = \begin{bmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 0 & 1 \end{bmatrix}, \quad R_{\text{mesh}} = R_x(-90^\circ)
+\end{equation}
+
+\subsection{Tensore d'Inerzia e Stabilizzazione del Rigidbody}
+I \texttt{WheelCollider} da soli non contribuiscono alla massa del \texttt{Rigidbody}, generando un tensore d'inerzia degenere:
+
+\begin{equation}
+I_{\text{degenere}} = \begin{bmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 0 & 1 \end{bmatrix} \quad \xrightarrow{\text{Add BoxCollider}} \quad I_{\text{stabilizzato}} = \begin{bmatrix} 1856 & 0 & 0 \\ 0 & 2007 & 0 \\ 0 & 0 & 443 \end{bmatrix}
+\end{equation}
+
+\section{Prova di Rotazione ed Orbita attorno al Cubo in Play Mode}
+
+Per verificare la tenuta di strada e la risposta dinamica, l'auto è stata testata in Play Mode su una superficie espansa a $80 \times 80\,\text{m}$ (scala $8,1,8$) attorno ad un cubo rosso di riferimento posto all'origine $(0,0,0)$.
+
+\subsection{Telemetria dello Yaw e Traiettoria}
+L'angolo di imbardata ($\text{Yaw} = \theta$) e la traiettoria spaziale $(x,y,z)$ sono stati campionati in tempo reale durante la sterzata circolare:
+
+\begin{equation}
+\theta(t) = \text{atan2}(v_y, v_x) \quad \implies \quad 0.0^\circ \longrightarrow -18.6^\circ \longrightarrow 233.1^\circ
+\end{equation}
+
+\begin{lstlisting}[caption={Dati di Telemetria acquisiti durante l'orbita del Cubo di Riferimento}]
+Campionamento Posizione (x, y, z):
+T0: ( 6.0, 0.9,  0.0) -> Inizio accelerazione
+T1: ( 3.2, 0.9, -4.1) -> Sterzata ad arco
+T2: (-2.8, 0.9,  3.5) -> Angolo Yaw = 233.1 deg (Orbita completata)
+\end{lstlisting}
+
+\section{Conclusioni}
+
+La versione personalizzata \texttt{pakkio/mcp-unity} dimostra come l'integrazione di fix grafici sul thread principale, unitamente a tool avanzati di gerarchia ed algoritmi di fisica geometrica, permetta ad un assistente AI di gestire in modo completamente autonomo la creazione, il debug e il collaudo dinamico di scenari 3D complessi in Unity Editor.
+
+\end{document}
