@@ -388,10 +388,10 @@ namespace McpUnity.Unity
 
                 return StartServerResult.Started;
             }
-            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse || ex.SocketErrorCode == SocketError.AccessDenied)
             {
                 CleanupFailedStart(webSocketServer);
-                string message = $"Failed to start WebSocket server: Port {McpUnitySettings.Instance.Port} is already in use. {ex.Message}";
+                string message = $"Failed to start WebSocket server: Port {McpUnitySettings.Instance.Port} is already in use or access was denied. {ex.Message}";
                 if (logAddressInUseAsError)
                 {
                     McpLogger.LogError(message);
