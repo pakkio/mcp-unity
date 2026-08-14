@@ -59,7 +59,7 @@ namespace McpUnity.Tools
         private JObject HandleGetStatus()
         {
             bool isBaking = StaticOcclusionCulling.isRunning;
-            bool isDataPresent = StaticOcclusionCulling.doesSceneHaveOcclusionCullingData;
+            bool isDataPresent = StaticOcclusionCulling.umbraDataSize > 0;
 
             return new JObject
             {
@@ -167,7 +167,7 @@ namespace McpUnity.Tools
             List<GameObject> objectsToUpdate = new List<GameObject>();
             if (includeChildren)
             {
-                objectsToUpdate.AddRange(targetObject.GetComponentsInChildren<Transform>(true).ConvertAll(t => t.gameObject));
+                objectsToUpdate.AddRange(Array.ConvertAll(targetObject.GetComponentsInChildren<Transform>(true), t => t.gameObject));
             }
             else
             {
@@ -281,8 +281,10 @@ namespace McpUnity.Tools
                 sizeObj?["z"]?.ToObject<float>() ?? 0.5f
             );
 
-            portal.center = center;
-            portal.size = size;
+            SerializedObject serializedPortal = new SerializedObject(portal);
+            serializedPortal.FindProperty("m_Center").vector3Value = center;
+            serializedPortal.FindProperty("m_Size").vector3Value = size;
+            serializedPortal.ApplyModifiedProperties();
             portal.open = open;
 
             Undo.RegisterCreatedObjectUndo(go, $"Create {name}");

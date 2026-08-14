@@ -356,7 +356,7 @@ namespace McpUnity.Tools
             List<GameObject> objectsToUpdate = new List<GameObject>();
             if (includeChildren)
             {
-                objectsToUpdate.AddRange(targetObject.GetComponentsInChildren<Transform>(true).ConvertAll(t => t.gameObject));
+                objectsToUpdate.AddRange(Array.ConvertAll(targetObject.GetComponentsInChildren<Transform>(true), t => t.gameObject));
             }
             else
             {
