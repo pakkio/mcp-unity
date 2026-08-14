@@ -194,6 +194,12 @@ If no valid setting is found, Node falls back to:
 - `manage_navmesh` — Manages AI Navigation (bakes/clears NavMesh, configures NavMeshAgents and NavMeshObstacles, queries pathfinding routes)
 - `configure_post_processing` — Creates/configures Post-Processing Volumes and Volume Profiles (Bloom, Tonemapping, Vignette, Color Adjustments, DOF)
 - `create_virtual_camera` — Creates/configures Cinemachine Virtual Camera rigs (Follow, LookAt, 3rd Person, First Person POV, Orbit)
+- `manage_cvr_world` — Manages ChilloutVR CCK Worlds (CVRWorld settings, spawn points, optimized mirrors, seats/chairs, portals)
+- `configure_cvr_interactivity` — Configures ChilloutVR CCK Interactivity (CVRInteractable triggers/actions, CVRPickupObject grips, CVRVariableBuffer sync)
+- `manage_cvr_avatar` — Manages ChilloutVR CCK Avatars (CVRAvatar viewpoint/voice, visemes, eye blinks, Advanced Avatar Settings AAS)
+- `inspect_cvr_cck` — Audits and validates ChilloutVR CCK content (Worlds, Avatars, Props) for upload readiness and performance budgets
+- `howto_cck` — Provides expert ChilloutVR CCK recipes, best practices, and GameObject scaffolding for vehicles, doors, elevators, mirrors, pickups, AAS, and optimization
+- `configure_cvr_vehicle` — Creates and configures ChilloutVR CCK drivable vehicles (4-wheel chassis rigs, WheelCollider suspension tuning, passenger seats)
 - `execute_batch` — Executes multiple MCP Unity operations in a single synchronous Unity frame
 
 ### Available apps (current)

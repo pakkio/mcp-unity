@@ -205,6 +205,24 @@ The following tools are available for manipulating and querying Unity scenes and
 - `create_virtual_camera`: Creates and configures Cinemachine Virtual Camera rigs (Follow, LookAt, 3rd Person, First Person POV, Orbit)
   > **Example prompt:** "Create a 3rd person Cinemachine Virtual Camera following the Player with follow offset (0, 2, -4)"
 
+- `manage_cvr_world`: Manages ChilloutVR CCK World components: CVRWorld root settings, spawn points, optimized mirrors, seats/chairs, and portals
+  > **Example prompt:** "Setup a CVRWorld with respawn height -50, run speed 5, and create an optimized mirror with dimensions 4x2.5"
+
+- `configure_cvr_interactivity`: Configures ChilloutVR CCK Interactivity: CVRInteractable triggers, CVRPickupObject physics grips, and CVRVariableBuffer networked synchronization
+  > **Example prompt:** "Add a CVRInteractable button that teleports the player to the spawn point, and make the flashlight a CVRPickupObject"
+
+- `manage_cvr_avatar`: Manages ChilloutVR CCK Avatar components: CVRAvatar setup, automatic viewpoint/voice calculation, lip-sync visemes, blinks, and Advanced Avatar Settings (AAS)
+  > **Example prompt:** "Setup a CVRAvatar on the imported humanoid model and add an AAS toggle setting for 'HatToggle'"
+
+- `inspect_cvr_cck`: Audits and validates ChilloutVR CCK content (Worlds, Avatars, Props) for upload readiness, performance budgets, and disallowed components
+  > **Example prompt:** "Validate the active scene for ChilloutVR world upload and check polygon budgets"
+
+- `howto_cck`: Provides expert ChilloutVR CCK production recipes, best practices, and optional GameObject scaffolding (e.g. `vehicles`, `door`, `mirror`, `elevator`, `pickup`, `aas`, `video_player`, `optimization`)
+  > **Example prompt:** "howto_cck topic='vehicles' scaffold=true" or "How do I build an interactive sliding door in ChilloutVR CCK?"
+
+- `configure_cvr_vehicle`: Creates and configures ChilloutVR CCK drivable vehicles: 4-wheel chassis rigs, WheelCollider suspension tuning, and passenger seats
+  > **Example prompt:** "Create a drivable 4-wheel car rig with suspension spring 32000, headlights, driver CVRSeat, and 3 passenger seats"
+
 - `execute_batch`: Executes multiple tool operations in a single synchronous Unity frame, eliminating round-trip latency
   > **Example prompt:** "Create 10 empty GameObjects named Enemy_1 through Enemy_10 in a single batch operation"
 
@@ -255,8 +273,21 @@ Prompts are pre-configured templates that provide guided workflows for common Un
 - `gameobject_handling_strategy`: Provides a structured workflow for working with GameObjects, including which tools and resources to use
   > **Usage:** In your AI assistant, use the prompt "gameobject_handling_strategy" with a GameObject ID, name, or path to get step-by-step guidance
 
+## ChilloutVR (CCK) Integration
+
+MCP Unity includes native, reflection-backed support for **ChilloutVR** and the **ABI Content Creation Kit (CCK)** for building worlds, avatars, interactive mechanics, and drivable vehicles:
+
+- **World Management (`manage_cvr_world`)**: Setup `CVRWorld` root, configure player movement and flight physics, add spawn points, create optimized mirrors (`Optimized`, `AvatarOnly`, `Transparent`), create seating anchors (`CVRSeat`), and spawn portal gateways.
+- **Interactivity & Multiplayer Networking (`configure_cvr_interactivity`)**: Wire up `CVRInteractable` trigger sequences, configure `CVRPickupObject` physics grips and throwing velocities, and set up `CVRVariableBuffer` synchronized variables.
+- **Avatar Setup & AAS (`manage_cvr_avatar`)**: Automatic eye viewpoint and mouth voice position calculations from Humanoid bones, 15-viseme lip sync bindings, eye blink blendshapes, and Advanced Avatar Settings (AAS) radial wheels and toggles.
+- **Drivable Vehicles (`configure_cvr_vehicle`)**: Create 4-wheel chassis rigs with pre-tuned `WheelCollider` suspension, low center-of-mass offsets, driver seats, steering wheels, spot headlights, engine audio, and passenger seating.
+- **Content Pre-Flight Audit (`inspect_cvr_cck`)**: Validate scenes and avatars against ChilloutVR performance budgets (polygon counts, material slots, audio spatialization, and disallowed script checks).
+- **Recipes & Scaffolding (`howto_cck`)**: Production recipes and instant GameObject hierarchy scaffolding for vehicles, doors, elevators, mirrors, pickups, AAS, and portals. Supports wildcard lookups (e.g. `topic='*'`, `topic='veh*'`).
+
+📖 For a detailed walkthrough and examples, see the [ChilloutVR CCK Integration Guide](docs/chilloutvr-cck-integration.md).
+
 ## Requirements
-- Unity 6 or later - to [install the server](#install-server)
+- Unity 2022.3 LTS (specifically **2022.3.58f1** for ChilloutVR CCK) or Unity 6+ - to [install the server](#install-server)
 - Node.js 18 or later - to [start the server](#start-server)
 - npm 9 or later - to [debug the server](#debug-server)
 

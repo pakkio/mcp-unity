@@ -1014,6 +1014,25 @@ FindLocalAssetsTool findLocalAssetsTool = new FindLocalAssetsTool();
             CreateVirtualCameraTool createVirtualCameraTool = new CreateVirtualCameraTool();
             _tools.Add(createVirtualCameraTool.Name, createVirtualCameraTool);
 
+            // Register ChilloutVR CCK Tools
+            ManageCvrWorldTool manageCvrWorldTool = new ManageCvrWorldTool();
+            _tools.Add(manageCvrWorldTool.Name, manageCvrWorldTool);
+
+            ConfigureCvrInteractivityTool configureCvrInteractivityTool = new ConfigureCvrInteractivityTool();
+            _tools.Add(configureCvrInteractivityTool.Name, configureCvrInteractivityTool);
+
+            ManageCvrAvatarTool manageCvrAvatarTool = new ManageCvrAvatarTool();
+            _tools.Add(manageCvrAvatarTool.Name, manageCvrAvatarTool);
+
+            InspectCvrCckTool inspectCvrCckTool = new InspectCvrCckTool();
+            _tools.Add(inspectCvrCckTool.Name, inspectCvrCckTool);
+
+            HowtoCckTool howtoCckTool = new HowtoCckTool();
+            _tools.Add(howtoCckTool.Name, howtoCckTool);
+
+            ConfigureCvrVehicleTool configureCvrVehicleTool = new ConfigureCvrVehicleTool();
+            _tools.Add(configureCvrVehicleTool.Name, configureCvrVehicleTool);
+
             // Register BatchExecuteTool (must be registered last as it needs access to other tools)
             BatchExecuteTool batchExecuteTool = new BatchExecuteTool(this);
             _tools.Add(batchExecuteTool.Name, batchExecuteTool);

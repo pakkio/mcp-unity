@@ -47,6 +47,12 @@ import { registerConfigureTextureSettingsTool } from './tools/textureTools.js';
 import { registerManageNavMeshTool } from './tools/navmeshTools.js';
 import { registerConfigurePostProcessingTool } from './tools/postProcessingTools.js';
 import { registerCreateVirtualCameraTool } from './tools/cinemachineTools.js';
+import { registerManageCvrWorldTool } from './tools/cvrWorldTools.js';
+import { registerConfigureCvrInteractivityTool } from './tools/cvrInteractivityTools.js';
+import { registerManageCvrAvatarTool } from './tools/cvrAvatarTools.js';
+import { registerInspectCvrCckTool } from './tools/cvrCckAuditTools.js';
+import { registerHowtoCckTool } from './tools/cvrHowToTools.js';
+import { registerConfigureCvrVehicleTool } from './tools/cvrVehicleTools.js';
 import { registerBatchExecuteTool } from './tools/batchExecuteTool.js';
 import { registerShowUnityDashboardTool } from './tools/showUnityDashboardTool.js';
 import { registerGetScenesHierarchyTool } from './tools/getScenesHierarchyTool.js';
@@ -174,6 +180,14 @@ registerConfigureTextureSettingsTool(server, mcpUnity, toolLogger);
 registerManageNavMeshTool(server, mcpUnity, toolLogger);
 registerConfigurePostProcessingTool(server, mcpUnity, toolLogger);
 registerCreateVirtualCameraTool(server, mcpUnity, toolLogger);
+
+// Register ChilloutVR CCK Tools
+registerManageCvrWorldTool(server, mcpUnity, toolLogger);
+registerConfigureCvrInteractivityTool(server, mcpUnity, toolLogger);
+registerManageCvrAvatarTool(server, mcpUnity, toolLogger);
+registerInspectCvrCckTool(server, mcpUnity, toolLogger);
+registerHowtoCckTool(server, mcpUnity, toolLogger);
+registerConfigureCvrVehicleTool(server, mcpUnity, toolLogger);
 
 // Register Batch Execute Tool (high-priority for performance)
 registerBatchExecuteTool(server, mcpUnity, toolLogger);

@@ -50,6 +50,12 @@ automate scene and asset management, run tests, install packages, and gather dia
 - [`manage_navmesh`](README.md#mcp-server-tools): Manages AI Navigation (bakes NavMesh, configures NavMeshAgents/Obstacles, queries path routes).
 - [`configure_post_processing`](README.md#mcp-server-tools): Creates/configures Post-Processing Volumes and Volume Profiles (Bloom, ACES Tonemapping, Vignette, DOF).
 - [`create_virtual_camera`](README.md#mcp-server-tools): Creates Cinemachine Virtual Camera rigs (Follow, LookAt, 3rd person, 1st person POV, orbit).
+- [`manage_cvr_world`](README.md#mcp-server-tools): Manages ChilloutVR CCK Worlds (CVRWorld settings, spawn points, mirrors, seats, portals).
+- [`configure_cvr_interactivity`](README.md#mcp-server-tools): Configures ChilloutVR CCK Interactivity (CVRInteractable triggers, CVRPickupObject grips, CVRVariableBuffer sync).
+- [`manage_cvr_avatar`](README.md#mcp-server-tools): Manages ChilloutVR CCK Avatars (CVRAvatar viewpoint/voice, visemes, blinks, AAS settings).
+- [`inspect_cvr_cck`](README.md#mcp-server-tools): Audits and validates ChilloutVR CCK content (Worlds, Avatars, Props) for upload readiness.
+- [`howto_cck`](README.md#mcp-server-tools): Provides expert ChilloutVR CCK recipes, best practices, and GameObject scaffolding.
+- [`configure_cvr_vehicle`](README.md#mcp-server-tools): Creates and configures ChilloutVR CCK drivable vehicles, suspension tuning, and passenger seats.
 - [`execute_batch`](README.md#mcp-server-tools): Executes multiple MCP operations synchronously in a single frame.
 
 ## Resources
