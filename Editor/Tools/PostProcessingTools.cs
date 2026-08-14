@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
-using UnityEngine.Rendering;
 using UnityEditor;
 using Newtonsoft.Json.Linq;
 using McpUnity.Unity;
@@ -51,6 +50,17 @@ namespace McpUnity.Tools
 
         private JObject HandleSetupGlobalVolume(JObject parameters, string reason)
         {
+            Type volumeType = GetVolumeType();
+            Type profileType = GetVolumeProfileType();
+
+            if (volumeType == null || profileType == null)
+            {
+                return McpUnitySocketHandler.CreateErrorResponse(
+                    "Post-processing / Volume system is not available in the current project. Install 'com.unity.render-pipelines.universal' (URP) or 'com.unity.postprocessing' first.",
+                    "post_processing_not_available"
+                );
+            }
+
             string volumeName = parameters["volumeName"]?.ToObject<string>() ?? "Global Post Processing Volume";
             string profilePath = parameters["profilePath"]?.ToObject<string>();
             bool isGlobal = parameters["isGlobal"]?.ToObject<bool?>() ?? true;
@@ -65,19 +75,24 @@ namespace McpUnity.Tools
                 Undo.RegisterCreatedObjectUndo(volumeGo, "Create Post Processing Volume");
             }
 
-            Volume volume = volumeGo.GetComponent<Volume>();
+            Component volume = volumeGo.GetComponent(volumeType);
             if (volume == null)
             {
-                volume = Undo.AddComponent<Volume>(volumeGo);
+                volume = Undo.AddComponent(volumeGo, volumeType);
             }
             else
             {
                 Undo.RecordObject(volume, "Configure Volume");
             }
 
-            volume.isGlobal = isGlobal;
-            volume.weight = weight;
-            volume.priority = priority;
+            PropertyInfo isGlobalProp = volumeType.GetProperty("isGlobal");
+            if (isGlobalProp != null) isGlobalProp.SetValue(volume, isGlobal);
+
+            PropertyInfo weightProp = volumeType.GetProperty("weight");
+            if (weightProp != null) weightProp.SetValue(volume, weight);
+
+            PropertyInfo priorityProp = volumeType.GetProperty("priority");
+            if (priorityProp != null) priorityProp.SetValue(volume, priority);
 
             // Create or load VolumeProfile asset
             if (string.IsNullOrWhiteSpace(profilePath))
@@ -89,7 +104,7 @@ namespace McpUnity.Tools
             if (!profilePath.StartsWith("Assets/")) profilePath = "Assets/" + profilePath.TrimStart('/');
             if (!profilePath.EndsWith(".asset", StringComparison.OrdinalIgnoreCase)) profilePath += ".asset";
 
-            VolumeProfile profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(profilePath);
+            ScriptableObject profile = AssetDatabase.LoadAssetAtPath(profilePath, profileType) as ScriptableObject;
             if (profile == null)
             {
                 string dir = Path.GetDirectoryName(profilePath);
@@ -99,13 +114,15 @@ namespace McpUnity.Tools
                     AssetDatabase.Refresh();
                 }
 
-                profile = ScriptableObject.CreateInstance<VolumeProfile>();
+                profile = ScriptableObject.CreateInstance(profileType);
                 profilePath = AssetDatabase.GenerateUniqueAssetPath(profilePath);
                 AssetDatabase.CreateAsset(profile, profilePath);
                 AssetDatabase.SaveAssets();
             }
 
-            volume.sharedProfile = profile;
+            PropertyInfo sharedProfileProp = volumeType.GetProperty("sharedProfile") ?? volumeType.GetProperty("profile");
+            if (sharedProfileProp != null) sharedProfileProp.SetValue(volume, profile);
+
             EditorUtility.SetDirty(volumeGo);
             EditorUtility.SetDirty(profile);
             UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
@@ -120,13 +137,24 @@ namespace McpUnity.Tools
                 ["volumeName"] = volumeName,
                 ["instanceId"] = UnityObjectId.GetObjectId(volumeGo),
                 ["profilePath"] = profilePath,
-                ["isGlobal"] = volume.isGlobal,
-                ["weight"] = volume.weight
+                ["isGlobal"] = isGlobal,
+                ["weight"] = weight
             };
         }
 
         private JObject HandleSetOverride(JObject parameters, string reason)
         {
+            Type volumeType = GetVolumeType();
+            Type profileType = GetVolumeProfileType();
+
+            if (volumeType == null || profileType == null)
+            {
+                return McpUnitySocketHandler.CreateErrorResponse(
+                    "Post-processing / Volume system is not available in the current project. Install 'com.unity.render-pipelines.universal' (URP) or 'com.unity.postprocessing' first.",
+                    "post_processing_not_available"
+                );
+            }
+
             string profilePath = parameters["profilePath"]?.ToObject<string>();
             string volumeName = parameters["volumeName"]?.ToObject<string>();
             string effectType = parameters["effectType"]?.ToObject<string>()?.ToLowerInvariant();
@@ -137,30 +165,41 @@ namespace McpUnity.Tools
                 return McpUnitySocketHandler.CreateErrorResponse("Parameter 'effectType' is required (e.g. 'bloom', 'tonemapping', 'vignette', 'color_adjustments', 'depth_of_field', 'chromatic_aberration').", "validation_error");
             }
 
-            VolumeProfile profile = null;
+            ScriptableObject profile = null;
             if (!string.IsNullOrEmpty(profilePath))
             {
-                profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(profilePath);
+                profile = AssetDatabase.LoadAssetAtPath(profilePath, profileType) as ScriptableObject;
             }
             else if (!string.IsNullOrEmpty(volumeName))
             {
                 GameObject go = GameObject.Find(volumeName);
                 if (go != null)
                 {
-                    Volume v = go.GetComponent<Volume>();
-                    if (v != null) profile = v.sharedProfile;
+                    Component v = go.GetComponent(volumeType);
+                    if (v != null)
+                    {
+                        PropertyInfo sharedProfileProp = volumeType.GetProperty("sharedProfile") ?? volumeType.GetProperty("profile");
+                        if (sharedProfileProp != null) profile = sharedProfileProp.GetValue(v) as ScriptableObject;
+                    }
                 }
             }
             else
             {
                 // Find any global volume in scene
-                Volume[] volumes = UnityEngine.Object.FindObjectsByType<Volume>(FindObjectsSortMode.None);
-                foreach (var v in volumes)
+                Component[] volumes = UnityEngine.Object.FindObjectsByType(volumeType, FindObjectsSortMode.None) as Component[];
+                if (volumes != null)
                 {
-                    if (v.isGlobal && v.sharedProfile != null)
+                    PropertyInfo isGlobalProp = volumeType.GetProperty("isGlobal");
+                    PropertyInfo sharedProfileProp = volumeType.GetProperty("sharedProfile") ?? volumeType.GetProperty("profile");
+
+                    foreach (var v in volumes)
                     {
-                        profile = v.sharedProfile;
-                        break;
+                        bool isGlobal = isGlobalProp != null ? (bool)(isGlobalProp.GetValue(v) ?? false) : true;
+                        if (isGlobal && sharedProfileProp != null)
+                        {
+                            profile = sharedProfileProp.GetValue(v) as ScriptableObject;
+                            if (profile != null) break;
+                        }
                     }
                 }
             }
@@ -194,7 +233,7 @@ namespace McpUnity.Tools
 
             if (comp == null)
             {
-                MethodInfo addMethod = typeof(VolumeProfile).GetMethod("Add", new[] { typeof(Type), typeof(bool) });
+                MethodInfo addMethod = profileType.GetMethod("Add", new[] { typeof(Type), typeof(bool) });
                 if (addMethod != null)
                 {
                     comp = addMethod.Invoke(profile, new object[] { componentType, true }) as ScriptableObject;
@@ -208,7 +247,7 @@ namespace McpUnity.Tools
 
             if (comp != null)
             {
-                PropertyInfo activeProp = comp.GetType().GetProperty("active");
+                PropertyInfo activeProp = comp.GetType().GetProperty("active") ?? comp.GetType().GetProperty("enabled");
                 if (activeProp != null) activeProp.SetValue(comp, true);
 
                 // Apply settings via reflection on VolumeParameter properties
@@ -237,22 +276,37 @@ namespace McpUnity.Tools
 
         private JObject HandleGetProfileInfo(JObject parameters)
         {
+            Type volumeType = GetVolumeType();
+            Type profileType = GetVolumeProfileType();
+
+            if (profileType == null)
+            {
+                return McpUnitySocketHandler.CreateErrorResponse(
+                    "Post-processing / Volume system is not available in the current project.",
+                    "post_processing_not_available"
+                );
+            }
+
             string profilePath = parameters["profilePath"]?.ToObject<string>();
-            VolumeProfile profile = null;
+            ScriptableObject profile = null;
 
             if (!string.IsNullOrEmpty(profilePath))
             {
-                profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(profilePath);
+                profile = AssetDatabase.LoadAssetAtPath(profilePath, profileType) as ScriptableObject;
             }
-            else
+            else if (volumeType != null)
             {
-                Volume[] volumes = UnityEngine.Object.FindObjectsByType<Volume>(FindObjectsSortMode.None);
-                foreach (var v in volumes)
+                Component[] volumes = UnityEngine.Object.FindObjectsByType(volumeType, FindObjectsSortMode.None) as Component[];
+                if (volumes != null)
                 {
-                    if (v.sharedProfile != null)
+                    PropertyInfo sharedProfileProp = volumeType.GetProperty("sharedProfile") ?? volumeType.GetProperty("profile");
+                    if (sharedProfileProp != null)
                     {
-                        profile = v.sharedProfile;
-                        break;
+                        foreach (var v in volumes)
+                        {
+                            profile = sharedProfileProp.GetValue(v) as ScriptableObject;
+                            if (profile != null) break;
+                        }
                     }
                 }
             }
@@ -269,7 +323,7 @@ namespace McpUnity.Tools
                 foreach (var comp in componentsList)
                 {
                     if (comp == null) continue;
-                    PropertyInfo activeProp = comp.GetType().GetProperty("active");
+                    PropertyInfo activeProp = comp.GetType().GetProperty("active") ?? comp.GetType().GetProperty("enabled");
                     bool isActive = activeProp != null ? (bool)(activeProp.GetValue(comp) ?? true) : true;
                     effectsArray.Add(new JObject
                     {
@@ -290,28 +344,56 @@ namespace McpUnity.Tools
             };
         }
 
+        private static Type FindType(string typeName)
+        {
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    Type t = assembly.GetType(typeName);
+                    if (t != null) return t;
+                }
+                catch { }
+            }
+            return null;
+        }
+
+        private static Type GetVolumeType()
+        {
+            return FindType("UnityEngine.Rendering.Volume")
+                ?? FindType("UnityEngine.Rendering.PostProcessing.PostProcessVolume");
+        }
+
+        private static Type GetVolumeProfileType()
+        {
+            return FindType("UnityEngine.Rendering.VolumeProfile")
+                ?? FindType("UnityEngine.Rendering.PostProcessing.PostProcessProfile");
+        }
+
         private static bool IsVolumeComponentType(Type t)
         {
             if (t == null) return false;
             Type cur = t;
             while (cur != null && cur != typeof(object))
             {
-                if (cur.Name == "VolumeComponent" || cur.FullName == "UnityEngine.Rendering.VolumeComponent")
+                if (cur.Name == "VolumeComponent" || cur.FullName == "UnityEngine.Rendering.VolumeComponent"
+                    || cur.Name == "PostProcessEffectSettings" || cur.FullName == "UnityEngine.Rendering.PostProcessing.PostProcessEffectSettings")
                     return true;
                 cur = cur.BaseType;
             }
             return false;
         }
 
-        private static System.Collections.IEnumerable GetProfileComponents(VolumeProfile profile)
+        private static System.Collections.IEnumerable GetProfileComponents(ScriptableObject profile)
         {
             if (profile == null) return null;
-            PropertyInfo prop = typeof(VolumeProfile).GetProperty("components");
+            Type pType = profile.GetType();
+            PropertyInfo prop = pType.GetProperty("components") ?? pType.GetProperty("settings");
             if (prop != null)
             {
                 return prop.GetValue(profile) as System.Collections.IEnumerable;
             }
-            FieldInfo field = typeof(VolumeProfile).GetField("components");
+            FieldInfo field = pType.GetField("components") ?? pType.GetField("settings");
             if (field != null)
             {
                 return field.GetValue(profile) as System.Collections.IEnumerable;
