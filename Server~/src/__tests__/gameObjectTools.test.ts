@@ -9,6 +9,7 @@ import {
 import { registerGetGameObjectTool } from '../tools/getGameObjectTool.js';
 import { registerUpdateGameObjectTool } from '../tools/updateGameObjectTool.js';
 import { registerUpdateComponentTool } from '../tools/updateComponentTool.js';
+import { registerRemoveComponentTool } from '../tools/removeComponentTool.js';
 import { registerSelectGameObjectTool } from '../tools/selectGameObjectTool.js';
 import { registerCreatePrefabTool } from '../tools/createPrefabTool.js';
 import { registerAddAssetToSceneTool } from '../tools/addAssetToSceneTool.js';
@@ -214,6 +215,36 @@ describe('GameObject and Component Tools', () => {
       mockSendRequest.mockResolvedValue({ success: false });
 
       await expect(handler({ objectPath: 'Player', componentName: 'BoxCollider', propertyValues: { isTrigger: true } })).rejects.toMatchObject({
+        type: ErrorType.TOOL_EXECUTION
+      });
+    });
+  });
+
+  describe('remove_component', () => {
+    it('registers and executes remove_component', async () => {
+      registerRemoveComponentTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'remove_component')![3] as (params: any) => Promise<any>;
+      mockSendRequest.mockResolvedValue({ success: true, message: 'Removed Component' });
+
+      const res = await handler({ objectPath: 'Player', componentName: 'CircleDriver' });
+      expect(res.content[0].text).toContain('Removed Component');
+    });
+
+    it('validates required parameters in remove_component', async () => {
+      registerRemoveComponentTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'remove_component')![3] as (params: any) => Promise<any>;
+
+      await expect(handler({ objectPath: 'Player' })).rejects.toMatchObject({
+        type: ErrorType.VALIDATION
+      });
+    });
+
+    it('handles failure for remove_component', async () => {
+      registerRemoveComponentTool(mockServer as any, mockMcpUnity as any, mockLogger as any);
+      const handler = mockServerTool.mock.calls.find(call => call[0] === 'remove_component')![3] as (params: any) => Promise<any>;
+      mockSendRequest.mockResolvedValue({ success: false });
+
+      await expect(handler({ objectPath: 'Player', componentName: 'CircleDriver' })).rejects.toMatchObject({
         type: ErrorType.TOOL_EXECUTION
       });
     });

@@ -70,6 +70,9 @@ The following tools are available for manipulating and querying Unity scenes and
 - `update_component`: Updates component fields on a GameObject or adds it to the GameObject if it does not contain the component
   > **Example prompt:** "Add a Rigidbody component to the Player object and set its mass to 5"
 
+- `remove_component`: Removes a component from a GameObject (undoable in the Editor via the Undo system)
+  > **Example prompt:** "Remove the CircleDriver component from the car"
+
 - `add_package`: Installs new packages in the Unity Package Manager
   > **Example prompt:** "Add the TextMeshPro package to my project"
 

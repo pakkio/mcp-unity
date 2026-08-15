@@ -132,6 +132,7 @@ If no valid setting is found, Node falls back to:
 - `select_gameobject` — Select GameObjects in hierarchy
 - `update_gameobject` — Update or create GameObject properties
 - `update_component` — Update or add components on GameObjects
+- `remove_component` — Remove a component from a GameObject (undoable in Editor via Undo system)
 - `add_package` — Install packages via Package Manager
 - `run_tests` — Run Unity Test Runner tests
 - `send_console_log` — Send logs to Unity console

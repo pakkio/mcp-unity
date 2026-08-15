@@ -11,6 +11,7 @@ import { registerRunTestsTool } from './tools/runTestsTool.js';
 import { registerSendConsoleLogTool } from './tools/sendConsoleLogTool.js';
 import { registerGetConsoleLogsTool } from './tools/getConsoleLogsTool.js';
 import { registerUpdateComponentTool } from './tools/updateComponentTool.js';
+import { registerRemoveComponentTool } from './tools/removeComponentTool.js';
 import { registerAddAssetToSceneTool } from './tools/addAssetToSceneTool.js';
 import { registerUpdateGameObjectTool } from './tools/updateGameObjectTool.js';
 import { registerCreatePrefabTool } from './tools/createPrefabTool.js';
@@ -77,7 +78,7 @@ const resourceLogger = new Logger('Resources', LogLevel.INFO);
 const server = new McpServer (
   {
     name: "MCP Unity Server",
-    version: "1.7.0"
+    version: "1.7.1"
   },
   {
     capabilities: {
@@ -99,6 +100,7 @@ registerRunTestsTool(server, mcpUnity, toolLogger);
 registerSendConsoleLogTool(server, mcpUnity, toolLogger);
 registerGetConsoleLogsTool(server, mcpUnity, toolLogger);
 registerUpdateComponentTool(server, mcpUnity, toolLogger);
+registerRemoveComponentTool(server, mcpUnity, toolLogger);
 registerAddAssetToSceneTool(server, mcpUnity, toolLogger);
 registerUpdateGameObjectTool(server, mcpUnity, toolLogger);
 registerCreatePrefabTool(server, mcpUnity, toolLogger);

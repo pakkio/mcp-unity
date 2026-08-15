@@ -782,6 +782,10 @@ namespace McpUnity.Unity
             UpdateComponentTool updateComponentTool = new UpdateComponentTool();
             _tools.Add(updateComponentTool.Name, updateComponentTool);
             
+            // Register RemoveComponentTool
+            RemoveComponentTool removeComponentTool = new RemoveComponentTool();
+            _tools.Add(removeComponentTool.Name, removeComponentTool);
+            
             // Register AddAssetToSceneTool
             AddAssetToSceneTool addAssetToSceneTool = new AddAssetToSceneTool();
             _tools.Add(addAssetToSceneTool.Name, addAssetToSceneTool);

@@ -25,6 +25,7 @@ automate scene and asset management, run tests, install packages, and gather dia
 - [`select_gameobject`](README.md#mcp-server-tools): Selects GameObjects in the Unity scene by path or instance ID.
 - [`update_gameobject`](README.md#mcp-server-tools): Creates or updates GameObjects (name, tag, layer, active/static).
 - [`update_component`](README.md#mcp-server-tools): Adds or edits component fields on GameObjects.
+- [`remove_component`](README.md#mcp-server-tools): Removes a component from a GameObject (undoable).
 - [`add_package`](README.md#mcp-server-tools): Installs Unity packages via the Package Manager.
 - [`run_tests`](README.md#mcp-server-tools): Runs Unity Test Runner tests (EditMode/PlayMode).
 - [`send_console_log`](README.md#mcp-server-tools): Sends a console message to the Unity Editor log.
